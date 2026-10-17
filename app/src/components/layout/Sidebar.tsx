@@ -1,4 +1,5 @@
 import { NavLink } from 'react-router-dom'
+import { OperateFlowMark } from '../brand/OperateFlowMark'
 import { NAV_ITEMS } from '../../data/navigation'
 
 interface SidebarProps {
@@ -14,12 +15,7 @@ export function Sidebar({ open, onNavigate }: SidebarProps) {
       }`}
     >
       <div className="flex h-16 items-center gap-3 border-b border-of-border px-5">
-        <div
-          className="flex h-9 w-9 items-center justify-center rounded-lg bg-of-primary text-sm font-bold text-white"
-          aria-hidden="true"
-        >
-          OF
-        </div>
+        <OperateFlowMark className="h-9 w-9 shrink-0" />
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold text-of-ink">
             OperateFlow
