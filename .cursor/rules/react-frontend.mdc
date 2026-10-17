@@ -1,0 +1,42 @@
+
+---
+description: React and TypeScript conventions for OperateFlow frontend
+globs: app/src/**/*.ts, app/src/**/*.tsx, app/src/**/*.css
+alwaysApply: false
+---
+
+# React Frontend Conventions
+
+## Technology
+- React with TypeScript and Vite.
+- Use functional React components and hooks.
+- Prefer strongly typed interfaces and types.
+- Avoid `any` unless there is a justified exception.
+
+## Components
+- Keep components focused and reusable.
+- Separate mock scenario data from presentation components.
+- Prefer composition over complicated component hierarchies.
+- Avoid unnecessary global state libraries for this small demo.
+- Keep the existing application structure consistent.
+
+## UI/UX
+- Follow the approved OperateFlow design direction: light, spacious, premium enterprise SaaS.
+- Use consistent spacing, typography, colors, and interaction patterns.
+- Support desktop layouts and reasonable smaller-screen behavior.
+- All visible interactive controls must have meaningful behavior.
+- Show clear loading, success, and error states where appropriate.
+- Include visible simulation indicators for mocked external actions.
+
+## Simulation Behavior
+- Use deterministic scripted workflows.
+- Maintain consistent request identifiers, personas, status values, and timeline events.
+- Separate lifecycle stage, workflow status, and delivery health.
+- Do not imply that AI-generated content has been independently verified.
+- Preserve human review and confirmation before consequential simulated actions.
+
+## Quality
+- Ensure TypeScript compilation succeeds.
+- Run lint and build checks when applicable.
+- Do not change unrelated functionality.
+- Explain any trade-offs or incomplete behavior.

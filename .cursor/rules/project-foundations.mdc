@@ -1,14 +1,37 @@
+
 ---
-description: OperateFlow concept simulation foundation
+description: Core OperateFlow demo project instructions
 alwaysApply: true
 ---
-- This project is a management-facing, fully fictional interactive concept simulation, not a production system.
-- Read `docs/demo-blueprint.md` before planning a feature when that feature's behavior is not already clear.
-- Do not add real APIs, LLMs, agents, databases, authentication, or external integrations.
-- No genuine client data. Every generated AI response and external action is clearly simulated.
-- Preserve the six approved persona names exactly as specified in `docs/demo-blueprint.md`.
-- Keep the five product lifecycle stages separate from workflow status and delivery health.
-- Human review/approval is required for estimates and client-facing communications.
-- Prefer small, testable, scoped changes. Explain intended file changes before significant implementation.
-- Avoid unnecessary libraries, duplicated state, excessive scaffolding, or changes outside the task.
-- After each task, report what changed, how it was tested, and any limitations.
+
+# OperateFlow — Project Foundations
+
+## Product
+- Build an interactive management demonstration of OperateFlow, an AI-powered enterprise delivery coordination platform.
+- Treat `docs/demo-blueprint.md` as the functional specification.
+- Preserve the approved five-stage lifecycle.
+- Do not introduce new product features or architectural commitments without approval.
+
+## Simulation Boundaries
+- This is a frontend-only concept simulation.
+- Use fictional data and scripted AI responses.
+- No real LLM calls, backend services, databases, authentication, ServiceNow, Jira, Teams, Outlook, or calendar integrations.
+- All external actions must be clearly represented as simulated.
+- Use shared simulation state so screens remain consistent.
+
+## Personas
+- Business Requester: John Harrison
+- Project Manager: Radhe Shyam
+- Technical Lead: Sanjay Parashar
+- Developer: Ajay Raj
+- Integration Lead: Sreekanth Mamdekar
+- Delivery Owner: Omer Ahmed
+
+## Development Workflow
+- Before substantial changes, explain the implementation approach.
+- Implement only the approved task scope.
+- Prefer simple, maintainable solutions over unnecessary abstractions.
+- Keep changes focused and reviewable.
+- Run appropriate checks after implementation.
+- Do not install dependencies or modify project configuration without explaining why.
+- Never commit, push, delete large sections, or perform destructive Git operations without explicit approval.
