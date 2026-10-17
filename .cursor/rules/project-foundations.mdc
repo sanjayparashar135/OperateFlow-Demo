@@ -1,0 +1,14 @@
+---
+description: OperateFlow concept simulation foundation
+alwaysApply: true
+---
+- This project is a management-facing, fully fictional interactive concept simulation, not a production system.
+- Read `docs/demo-blueprint.md` before planning a feature when that feature's behavior is not already clear.
+- Do not add real APIs, LLMs, agents, databases, authentication, or external integrations.
+- No genuine client data. Every generated AI response and external action is clearly simulated.
+- Preserve the six approved persona names exactly as specified in `docs/demo-blueprint.md`.
+- Keep the five product lifecycle stages separate from workflow status and delivery health.
+- Human review/approval is required for estimates and client-facing communications.
+- Prefer small, testable, scoped changes. Explain intended file changes before significant implementation.
+- Avoid unnecessary libraries, duplicated state, excessive scaffolding, or changes outside the task.
+- After each task, report what changed, how it was tested, and any limitations.
