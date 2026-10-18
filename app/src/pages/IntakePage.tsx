@@ -290,7 +290,7 @@ export function IntakePage() {
           Northstar Financial Services · Customer Onboarding Portal
         </p>
         <Link
-          to="/"
+          to="/overview"
           className="mt-1 w-fit text-sm font-semibold text-of-primary hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-of-primary"
         >
           Back to Overview

@@ -19,7 +19,7 @@ export interface NavItem {
 
 export const NAV_ITEMS: NavItem[] = [
   {
-    path: '/',
+    path: '/overview',
     label: 'Overview',
     title: 'Overview',
     description:

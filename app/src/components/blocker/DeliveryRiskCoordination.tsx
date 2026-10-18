@@ -313,80 +313,93 @@ export function DeliveryRiskCoordination({
             className="rounded-lg border border-of-border bg-of-canvas/40 px-3 py-2 text-sm leading-relaxed text-of-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-of-primary disabled:opacity-60"
           />
         </label>
-        <label className="mt-3 inline-flex items-start gap-2 text-sm text-of-ink-secondary">
-          <input
-            type="checkbox"
-            checked={recipientConfirmed}
-            disabled={!canCoordinate || pending}
-            onChange={(event) => setRecipientConfirmed(event.target.checked)}
-            className="mt-1"
-          />
-          <span>Confirm recipient: John Harrison (Business Owner)</span>
-        </label>
-        <label className="mt-2 inline-flex items-start gap-2 text-sm text-of-ink-secondary">
-          <input
-            type="checkbox"
-            checked={includeNextUpdate}
-            disabled={!canCoordinate || pending}
-            onChange={(event) => setIncludeNextUpdate(event.target.checked)}
-            className="mt-1"
-          />
-          <span>Include next-update commitment</span>
-        </label>
-        {includeNextUpdate ? (
-          <input
-            type="text"
-            value={nextUpdateNote}
-            onChange={(event) => setNextUpdateNote(event.target.value)}
-            disabled={!canCoordinate || pending}
-            className="mt-2 w-full rounded-lg border border-of-border bg-of-canvas/40 px-3 py-2 text-sm text-of-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-of-primary disabled:opacity-60"
-          />
-        ) : null}
+        <div className="mt-4 flex flex-col gap-4">
+          <div className="flex flex-col gap-3">
+            <label className="flex items-start gap-3 text-sm leading-snug text-of-ink-secondary">
+              <input
+                type="checkbox"
+                checked={recipientConfirmed}
+                disabled={!canCoordinate || pending}
+                onChange={(event) =>
+                  setRecipientConfirmed(event.target.checked)
+                }
+                className="mt-0.5 h-4 w-4 shrink-0"
+              />
+              <span className="min-w-0">
+                Confirm recipient: John Harrison (Business Owner)
+              </span>
+            </label>
+            <label className="flex items-start gap-3 text-sm leading-snug text-of-ink-secondary">
+              <input
+                type="checkbox"
+                checked={includeNextUpdate}
+                disabled={!canCoordinate || pending}
+                onChange={(event) =>
+                  setIncludeNextUpdate(event.target.checked)
+                }
+                className="mt-0.5 h-4 w-4 shrink-0"
+              />
+              <span className="min-w-0">Include next-update commitment</span>
+            </label>
+          </div>
 
-        {canCoordinate ? (
-          <button
-            type="button"
-            disabled={pending}
-            onClick={() => {
-              if (!recipientConfirmed) {
-                setError('Confirm John Harrison as the recipient.')
-                return
-              }
-              if (selectedActions.length === 0) {
-                setError('Select at least one planned coordination action.')
-                return
-              }
-              setPending(true)
-              setError(null)
-              const ok = onConfirmCommunication({
-                message,
-                recipientId: STAKEHOLDER_RECIPIENT_ID,
-                nextUpdateNote: includeNextUpdate
-                  ? nextUpdateNote.trim() || DEFAULT_NEXT_UPDATE_NOTE
-                  : null,
-                actionIds: selectedActions,
-              })
-              if (!ok) {
-                setError(
-                  'Unable to confirm. Check the message, recipient, and planned actions.',
-                )
-                setPending(false)
-              }
-            }}
-            className="mt-4 inline-flex rounded-lg bg-of-primary px-4 py-2 text-sm font-semibold text-white hover:bg-of-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-of-primary disabled:opacity-60"
-          >
-            Confirm stakeholder update
-          </button>
-        ) : (
-          <p className="mt-4 m-0 text-sm text-of-ink-secondary">
-            Stakeholder confirmation is available to Radhe Shyam.
-          </p>
-        )}
-        {error ? (
-          <p className="mt-2 m-0 text-sm font-medium text-rose-700" role="alert">
-            {error}
-          </p>
-        ) : null}
+          {includeNextUpdate ? (
+            <input
+              type="text"
+              value={nextUpdateNote}
+              onChange={(event) => setNextUpdateNote(event.target.value)}
+              disabled={!canCoordinate || pending}
+              className="w-full rounded-lg border border-of-border bg-of-canvas/40 px-3 py-2 text-sm text-of-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-of-primary disabled:opacity-60"
+            />
+          ) : null}
+
+          {canCoordinate ? (
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-start">
+              <button
+                type="button"
+                disabled={pending}
+                onClick={() => {
+                  if (!recipientConfirmed) {
+                    setError('Confirm John Harrison as the recipient.')
+                    return
+                  }
+                  if (selectedActions.length === 0) {
+                    setError('Select at least one planned coordination action.')
+                    return
+                  }
+                  setPending(true)
+                  setError(null)
+                  const ok = onConfirmCommunication({
+                    message,
+                    recipientId: STAKEHOLDER_RECIPIENT_ID,
+                    nextUpdateNote: includeNextUpdate
+                      ? nextUpdateNote.trim() || DEFAULT_NEXT_UPDATE_NOTE
+                      : null,
+                    actionIds: selectedActions,
+                  })
+                  if (!ok) {
+                    setError(
+                      'Unable to confirm. Check the message, recipient, and planned actions.',
+                    )
+                    setPending(false)
+                  }
+                }}
+                className="inline-flex w-full items-center justify-center rounded-lg bg-of-primary px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-of-primary-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-of-primary disabled:opacity-60 sm:w-auto"
+              >
+                Confirm stakeholder update
+              </button>
+            </div>
+          ) : (
+            <p className="m-0 text-sm text-of-ink-secondary">
+              Stakeholder confirmation is available to Radhe Shyam.
+            </p>
+          )}
+          {error ? (
+            <p className="m-0 text-sm font-medium text-rose-700" role="alert">
+              {error}
+            </p>
+          ) : null}
+        </div>
       </div>
     </section>
   )

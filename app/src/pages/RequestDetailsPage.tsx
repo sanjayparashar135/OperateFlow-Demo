@@ -194,7 +194,7 @@ export function RequestDetailsPage() {
             Back to Requests
           </Link>
           <Link
-            to="/"
+            to="/overview"
             className="text-of-primary hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-of-primary"
           >
             Overview

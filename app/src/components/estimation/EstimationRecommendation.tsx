@@ -16,23 +16,23 @@ export function EstimationRecommendation() {
           </span>
           <Badge tone="ai">AI-assisted recommendation</Badge>
         </div>
-        <div className="mt-3 flex flex-wrap items-end gap-x-6 gap-y-2">
-          <div>
-            <p className="m-0 text-xs font-semibold tracking-wide text-of-ink-muted uppercase">
+        <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-8">
+          <div className="flex min-w-0 flex-col">
+            <p className="m-0 min-h-4 text-xs font-semibold tracking-wide text-of-ink-muted uppercase">
               Suggested estimate
             </p>
-            <p className="mt-1 text-3xl font-semibold tracking-tight text-of-ink">
-              {suggestion.suggestedHours}{' '}
+            <p className="mt-2 flex min-h-10 items-baseline gap-1.5 text-3xl font-semibold tracking-tight text-of-ink">
+              <span>{suggestion.suggestedHours}</span>
               <span className="text-lg font-semibold text-of-ink-secondary">
                 hours
               </span>
             </p>
           </div>
-          <div>
-            <p className="m-0 text-xs font-semibold tracking-wide text-of-ink-muted uppercase">
+          <div className="flex min-w-0 flex-col">
+            <p className="m-0 min-h-4 text-xs font-semibold tracking-wide text-of-ink-muted uppercase">
               Suggested range
             </p>
-            <p className="mt-1 text-lg font-semibold text-of-ink">
+            <p className="mt-2 flex min-h-10 items-baseline text-lg font-semibold text-of-ink-secondary">
               {suggestion.rangeMin}–{suggestion.rangeMax} hours
             </p>
           </div>

@@ -9,8 +9,11 @@ import { Panel, PanelHeader } from '../ui/Panel'
 
 interface MeetingSummaryCardProps {
   meeting: ConfirmedMeetingRecord
-  /** When false, show related-work text without linking to Request Details. */
+  /** When true, related work links to full Request Details. */
   canOpenRequest: boolean
+  /** When true (meeting-only attendees), related work opens AI briefing. */
+  canOpenBriefing?: boolean
+  onOpenBriefing?: () => void
   /** Compact related-request context for attendees without request access. */
   relatedContext?: {
     title: string
@@ -21,6 +24,8 @@ interface MeetingSummaryCardProps {
 export function MeetingSummaryCard({
   meeting,
   canOpenRequest,
+  canOpenBriefing = false,
+  onOpenBriefing,
   relatedContext,
 }: MeetingSummaryCardProps) {
   return (
@@ -57,10 +62,18 @@ export function MeetingSummaryCard({
             {canOpenRequest ? (
               <Link
                 to={`/requests/${MAIN_REQUEST_ID}`}
-                className="text-of-primary hover:underline"
+                className="text-of-primary hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-of-primary"
               >
                 {MEETING_RELATED_WORK_LABEL}
               </Link>
+            ) : canOpenBriefing && onOpenBriefing ? (
+              <button
+                type="button"
+                onClick={onOpenBriefing}
+                className="inline text-left font-semibold text-of-primary underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-of-primary"
+              >
+                {MEETING_RELATED_WORK_LABEL}
+              </button>
             ) : (
               MEETING_RELATED_WORK_LABEL
             )}
@@ -79,6 +92,15 @@ export function MeetingSummaryCard({
           <p className="mt-1 m-0 text-sm leading-relaxed text-of-ink-secondary">
             {relatedContext.blockerSummary}
           </p>
+          {canOpenBriefing && onOpenBriefing ? (
+            <button
+              type="button"
+              onClick={onOpenBriefing}
+              className="mt-2 inline-flex text-sm font-semibold text-of-primary hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-of-primary"
+            >
+              Open AI Request Briefing
+            </button>
+          ) : null}
         </div>
       ) : null}
 

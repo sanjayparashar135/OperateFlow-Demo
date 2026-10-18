@@ -27,7 +27,7 @@ export function IntakeAlreadySubmitted({
           Open {requestId}
         </Link>
         <Link
-          to="/"
+          to="/overview"
           className="inline-flex items-center justify-center rounded-lg border border-of-border bg-of-surface px-4 py-2.5 text-sm font-semibold text-of-ink transition-colors hover:bg-of-canvas focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-of-primary"
         >
           Back to Overview

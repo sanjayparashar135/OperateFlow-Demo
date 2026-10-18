@@ -1,4 +1,4 @@
-import { NavLink, useLocation } from 'react-router-dom'
+import { Link, NavLink, useLocation } from 'react-router-dom'
 import { OperateFlowMark } from '../brand/OperateFlowMark'
 import { NAV_ITEMS } from '../../data/navigation'
 
@@ -8,7 +8,7 @@ interface SidebarProps {
 }
 
 function isNavActive(pathname: string, itemPath: string): boolean {
-  if (itemPath === '/') return pathname === '/'
+  if (itemPath === '/overview') return pathname === '/overview'
   if (itemPath === '/requests') {
     return pathname === '/requests' || pathname.startsWith('/requests/')
   }
@@ -24,16 +24,23 @@ export function Sidebar({ open, onNavigate }: SidebarProps) {
         open ? 'translate-x-0' : '-translate-x-full'
       }`}
     >
-      <div className="flex h-16 items-center gap-3 border-b border-of-border px-5">
-        <OperateFlowMark className="h-9 w-9 shrink-0" />
-        <div className="min-w-0">
-          <p className="truncate text-sm font-semibold text-of-ink">
-            OperateFlow
-          </p>
-          <p className="truncate text-xs text-of-ink-muted">
-            Delivery Coordination Platform
-          </p>
-        </div>
+      <div className="flex h-16 items-center border-b border-of-border px-5">
+        <Link
+          to="/"
+          onClick={onNavigate}
+          className="flex min-w-0 items-center gap-3 rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-of-primary"
+          aria-label="Return to OperateFlow welcome page"
+        >
+          <OperateFlowMark className="h-9 w-9 shrink-0" />
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold text-of-ink">
+              OperateFlow
+            </p>
+            <p className="truncate text-xs text-of-ink-muted">
+              Delivery Coordination Platform
+            </p>
+          </div>
+        </Link>
       </div>
 
       <nav className="flex-1 overflow-y-auto px-3 py-4" aria-label="Primary">
@@ -45,7 +52,7 @@ export function Sidebar({ open, onNavigate }: SidebarProps) {
               <li key={item.path}>
                 <NavLink
                   to={item.path}
-                  end={item.path === '/'}
+                  end={item.path === '/overview'}
                   onClick={onNavigate}
                   className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
                     active

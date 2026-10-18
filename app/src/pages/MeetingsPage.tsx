@@ -1,4 +1,6 @@
+import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { AiRequestBriefingModal } from '../components/meetings/AiRequestBriefingModal'
 import { MeetingSummaryCard } from '../components/meetings/MeetingSummaryCard'
 import { SmartMeetingAssistant } from '../components/meetings/SmartMeetingAssistant'
 import { Panel, PanelHeader } from '../components/ui/Panel'
@@ -6,6 +8,10 @@ import { useRole } from '../context/useRole'
 import { useSimulation } from '../context/useSimulation'
 import { canConfirmMeeting } from '../data/capabilities'
 import { BLOCKED_TECHNICAL_DETAIL } from '../data/followUpDataset'
+import {
+  buildMeetingRequestBriefing,
+  canViewMeetingRequestBriefing,
+} from '../data/meetingBriefingHelpers'
 import {
   getVisibleMeeting,
   hydrateMeeting,
@@ -21,6 +27,7 @@ export function MeetingsPage() {
   const { currentPersona } = useRole()
   const { bundle, getRequestBundle, confirmMeeting, simulatedToday } =
     useSimulation()
+  const [briefingOpen, setBriefingOpen] = useState(false)
 
   const mainBundle = getRequestBundle(MAIN_REQUEST_ID)
   const visibleMeeting = getVisibleMeeting(bundle, currentPersona.id)
@@ -34,6 +41,14 @@ export function MeetingsPage() {
   const canOpenRequest =
     mainBundle !== null &&
     isRequestVisibleToPersona(mainBundle.request, currentPersona.id)
+  const canOpenBriefing = canViewMeetingRequestBriefing(
+    bundle,
+    currentPersona.id,
+  )
+  const briefing = useMemo(
+    () => (canOpenBriefing ? buildMeetingRequestBriefing(bundle) : null),
+    [bundle, canOpenBriefing],
+  )
 
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-5">
@@ -56,6 +71,8 @@ export function MeetingsPage() {
         <MeetingSummaryCard
           meeting={visibleMeeting}
           canOpenRequest={canOpenRequest}
+          canOpenBriefing={canOpenBriefing}
+          onOpenBriefing={() => setBriefingOpen(true)}
           relatedContext={
             canOpenRequest
               ? undefined
@@ -109,6 +126,12 @@ export function MeetingsPage() {
           ) : null}
         </Panel>
       ) : null}
+
+      <AiRequestBriefingModal
+        briefing={briefing}
+        open={briefingOpen && briefing !== null}
+        onClose={() => setBriefingOpen(false)}
+      />
     </div>
   )
 }

@@ -7,6 +7,7 @@ import { ApprovalsPlanningPage } from './pages/ApprovalsPlanningPage'
 import { ExecutionPage } from './pages/ExecutionPage'
 import { FollowUpsPage } from './pages/FollowUpsPage'
 import { IntakePage } from './pages/IntakePage'
+import { LandingPage } from './pages/LandingPage'
 import { MeetingsPage } from './pages/MeetingsPage'
 import { OverviewPage } from './pages/OverviewPage'
 import { RequestDetailsPage } from './pages/RequestDetailsPage'
@@ -17,8 +18,9 @@ function App() {
     <RoleProvider>
       <SimulationProvider>
         <Routes>
+          <Route index element={<LandingPage />} />
           <Route element={<AppShell />}>
-            <Route index element={<OverviewPage />} />
+            <Route path="overview" element={<OverviewPage />} />
             <Route path="requests" element={<RequestsPage />} />
             <Route path="requests/new" element={<IntakePage />} />
             <Route path="requests/:requestId" element={<RequestDetailsPage />} />
@@ -27,7 +29,7 @@ function App() {
             <Route path="follow-ups" element={<FollowUpsPage />} />
             <Route path="meetings" element={<MeetingsPage />} />
             <Route path="activity" element={<ActivityPage />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
+            <Route path="*" element={<Navigate to="/overview" replace />} />
           </Route>
         </Routes>
       </SimulationProvider>

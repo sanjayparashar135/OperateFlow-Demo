@@ -9,6 +9,7 @@
  * - Collaboration channel presentation defaults to Teams
  * - Build 6 blocker troubleshooting, coordination, stakeholder communication
  * - Build 7 smart meeting confirmation and attendee visibility
+ * - Build 8 meeting-attendee AI request briefing (no Request Details access)
  */
 import {
   applyBusinessApproval,
@@ -69,6 +70,10 @@ import {
   MEETING_SAMPLE_PROMPT,
   MEETING_TIMELINE_EVENT_ID,
 } from '../src/data/meetingDataset.ts'
+import {
+  buildMeetingRequestBriefing,
+  canViewMeetingRequestBriefing,
+} from '../src/data/meetingBriefingHelpers.ts'
 import {
   applyMeetingConfirmation,
   hydrateMeeting,
@@ -1066,6 +1071,64 @@ if (acceptResult.ok) {
               ) === false,
               'Sreekanth still cannot see REQ1235 via request visibility',
             )
+            assert(
+              canViewMeetingRequestBriefing(
+                meetingConfirmed.bundle,
+                'sreekanth-mamdekar',
+              ) === true,
+              'Sreekanth can open meeting-scoped AI request briefing',
+            )
+            assert(
+              canViewMeetingRequestBriefing(
+                meetingConfirmed.bundle,
+                'ajay-raj',
+              ) === false,
+              'Ajay keeps full request access and does not use briefing path',
+            )
+            assert(
+              canViewMeetingRequestBriefing(
+                meetingConfirmed.bundle,
+                'radhe-shyam',
+              ) === false,
+              'Radhe keeps full request access and does not use briefing path',
+            )
+            assert(
+              canViewMeetingRequestBriefing(
+                meetingConfirmed.bundle,
+                'john-harrison',
+              ) === false,
+              'Non-attendees cannot open the meeting request briefing',
+            )
+            const briefing = buildMeetingRequestBriefing(
+              meetingConfirmed.bundle,
+            )
+            assert(briefing !== null, 'Briefing builds for confirmed meeting')
+            if (briefing) {
+              assert(
+                briefing.requestId === MAIN_REQUEST_ID &&
+                  briefing.jiraId === MAIN_JIRA_ID,
+                'Briefing is scoped to meeting related work only',
+              )
+              assert(
+                briefing.currentBlocker !== null &&
+                  briefing.currentBlocker.length > 0,
+                'Briefing includes current blocker context',
+              )
+              assert(
+                briefing.lifecycleStage === 'Execution' &&
+                  briefing.workflowStatus === 'Blocked' &&
+                  briefing.deliveryHealth === 'At Risk',
+                'Briefing reflects blocked delivery position',
+              )
+              assert(
+                briefing.progressMilestones.length >= 4,
+                'Briefing includes milestones that occurred',
+              )
+              assert(
+                briefing.diagnosticDirections.length === 3,
+                'Briefing reuses diagnostic direction dataset',
+              )
+            }
             assert(
               meetingConfirmed.bundle.followUp?.responseDetail ===
                 BLOCKED_TECHNICAL_DETAIL,
