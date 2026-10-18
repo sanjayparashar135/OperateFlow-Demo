@@ -7,3 +7,11 @@ import type { PersonaId } from '../types/persona'
 export function canCreateRequest(personaId: PersonaId): boolean {
   return personaId === 'john-harrison'
 }
+
+/**
+ * Demo persona capability: only Sanjay Parashar (Solution Architect) may
+ * confirm or override the technical estimate. Not production RBAC.
+ */
+export function canConfirmEstimation(personaId: PersonaId): boolean {
+  return personaId === 'sanjay-parashar'
+}

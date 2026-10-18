@@ -6,6 +6,7 @@ import type {
   TimelineEvent,
 } from '../types/simulation'
 import { MAIN_JIRA_ID, MAIN_REQUEST_ID } from '../types/simulation'
+import { getDefaultEstimationDecision } from './estimationHelpers'
 import { getSimulatedToday } from './simDate'
 
 export function buildDefaultStructuredRequirements(): StructuredRequirements {
@@ -166,6 +167,7 @@ export function createSubmittedMainRequestBundle(
     requirements: confirmed,
     linkedRecords: buildLinkedRecords(),
     timelineEvents: buildTimelineEvents(confirmed, referenceDate),
+    estimation: getDefaultEstimationDecision(),
     activityEntries: [
       {
         id: 'act-req1235-01',

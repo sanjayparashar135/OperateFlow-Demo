@@ -5,6 +5,11 @@ import {
   useState,
   type ReactNode,
 } from 'react'
+import {
+  applyEstimationConfirmation,
+  hydrateEstimationDecision,
+  type ConfirmEstimationInput,
+} from '../data/estimationHelpers'
 import { createSubmittedMainRequestBundle } from '../data/mainRequestFactory'
 import { PORTFOLIO_REQUESTS, RECENT_ACTIVITY } from '../data/portfolio'
 import { getSimulatedToday } from '../data/simDate'
@@ -46,7 +51,10 @@ function parsePersistedBundle(raw: string): SubmittedSimulationBundle | null {
     if (!Array.isArray(bundle.timelineEvents) || !Array.isArray(bundle.activityEntries)) {
       return null
     }
-    return bundle
+    return {
+      ...bundle,
+      estimation: hydrateEstimationDecision(bundle.estimation),
+    }
   } catch {
     return null
   }
@@ -113,6 +121,7 @@ export function SimulationProvider({ children }: { children: ReactNode }) {
         requirements: bundle.requirements,
         linkedRecords: bundle.linkedRecords,
         timelineEvents: bundle.timelineEvents,
+        estimation: hydrateEstimationDecision(bundle.estimation),
       }
     },
     [bundle],
@@ -124,6 +133,17 @@ export function SimulationProvider({ children }: { children: ReactNode }) {
       setBundle(
         createSubmittedMainRequestBundle(requirements, getSimulatedToday()),
       )
+      return true
+    },
+    [bundle],
+  )
+
+  const confirmEstimation = useCallback(
+    (input: ConfirmEstimationInput) => {
+      if (bundle === null) return false
+      const result = applyEstimationConfirmation(bundle, input)
+      if (!result.ok) return false
+      setBundle(result.bundle)
       return true
     },
     [bundle],
@@ -142,6 +162,7 @@ export function SimulationProvider({ children }: { children: ReactNode }) {
       mainRequestId: bundle?.mainRequest.id ?? null,
       getRequestBundle,
       submitIntake,
+      confirmEstimation,
       resetDemo,
       bundle,
     }),
@@ -151,6 +172,7 @@ export function SimulationProvider({ children }: { children: ReactNode }) {
       bundle,
       getRequestBundle,
       submitIntake,
+      confirmEstimation,
       resetDemo,
     ],
   )

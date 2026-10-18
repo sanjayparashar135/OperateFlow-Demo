@@ -36,6 +36,7 @@ export type TimelineEventCategory =
   | 'integration'
   | 'review'
   | 'assignment'
+  | 'estimation'
 
 export interface TimelineEvent {
   id: string
@@ -47,6 +48,43 @@ export interface TimelineEvent {
   category: TimelineEventCategory
 }
 
+export interface HistoricalComparable {
+  jiraId: string
+  title: string
+  historicalEffortHours: number
+  relevance: string
+}
+
+export interface EffortBreakdownItem {
+  component: string
+  hours: number
+}
+
+export interface EstimationSuggestion {
+  suggestedHours: number
+  rangeMin: number
+  rangeMax: number
+  breakdown: EffortBreakdownItem[]
+  comparables: HistoricalComparable[]
+  rationale: string
+  defaultApproach: string
+}
+
+export type EstimationDecisionState = 'pending_review' | 'confirmed'
+
+export type EstimationMode = 'accepted' | 'overridden'
+
+/** Human decision persisted with the submitted REQ1235 bundle. */
+export interface EstimationDecision {
+  decisionState: EstimationDecisionState
+  mode: EstimationMode | null
+  confirmedHours: number | null
+  overrideJustification: string | null
+  confirmedApproach: string | null
+  decidedById: PersonaId | null
+  decidedAt: string | null
+}
+
 /** Atomic post-submit simulation snapshot for REQ1235. */
 export interface SubmittedSimulationBundle {
   mainRequest: DeliveryRequest
@@ -54,6 +92,8 @@ export interface SubmittedSimulationBundle {
   linkedRecords: LinkedRecord[]
   timelineEvents: TimelineEvent[]
   activityEntries: ActivityEntry[]
+  /** Optional for Build 3 session hydration; defaults to pending review. */
+  estimation?: EstimationDecision
 }
 
 export const MAIN_REQUEST_ID = 'REQ1235'

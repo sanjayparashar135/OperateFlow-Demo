@@ -1,15 +1,21 @@
 import type { DeliveryRequest } from '../../types/delivery'
+import type { PersonaId } from '../../types/persona'
 import {
   REQUEST_DETAILS_TABS,
   type RequestDetailsTabId,
 } from '../../data/requestDetailsTabs'
 import type {
+  EstimationDecision,
   LinkedRecord,
   StructuredRequirements,
   TimelineEvent,
 } from '../../types/simulation'
 import { formatDisplayDate } from '../../lib/format'
 import { getPartyDisplayRows } from '../../lib/requestParties'
+import {
+  EstimationPanel,
+  type EstimationFormSubmit,
+} from '../estimation/EstimationPanel'
 import {
   HealthBadge,
   PriorityBadge,
@@ -19,6 +25,7 @@ import {
 import { RequestTimeline } from './RequestTimeline'
 
 export type { RequestDetailsTabId }
+export type { EstimationFormSubmit }
 
 interface RequestDetailsTabsProps {
   tab: RequestDetailsTabId
@@ -28,6 +35,10 @@ interface RequestDetailsTabsProps {
   linkedRecords: LinkedRecord[]
   timelineEvents: TimelineEvent[]
   attentionReasons: string[]
+  estimation: EstimationDecision | null
+  estimationAvailable: boolean
+  personaId: PersonaId
+  onConfirmEstimation: (input: EstimationFormSubmit) => boolean
 }
 
 export function RequestDetailsTabs({
@@ -38,6 +49,10 @@ export function RequestDetailsTabs({
   linkedRecords,
   timelineEvents,
   attentionReasons,
+  estimation,
+  estimationAvailable,
+  personaId,
+  onConfirmEstimation,
 }: RequestDetailsTabsProps) {
   return (
     <div>
@@ -89,7 +104,18 @@ export function RequestDetailsTabs({
         {tab === 'linked' ? (
           <LinkedRecordsPanel records={linkedRecords} />
         ) : null}
-        {tab === 'estimation' ? <EstimationPlaceholder /> : null}
+        {tab === 'estimation' ? (
+          estimation ? (
+            <EstimationPanel
+              estimation={estimation}
+              personaId={personaId}
+              available={estimationAvailable}
+              onConfirm={onConfirmEstimation}
+            />
+          ) : (
+            <EstimationUnavailable />
+          )
+        ) : null}
       </div>
     </div>
   )
@@ -282,13 +308,12 @@ function LinkedRecordsPanel({ records }: { records: LinkedRecord[] }) {
   )
 }
 
-function EstimationPlaceholder() {
+function EstimationUnavailable() {
   return (
     <div className="rounded-lg border border-dashed border-of-border bg-of-canvas/50 px-4 py-6 text-center">
       <p className="m-0 text-sm font-semibold text-of-ink">Estimation</p>
       <p className="mt-2 text-sm leading-relaxed text-of-ink-muted">
-        Coming soon — AI-assisted estimation and planning will be available
-        after technical review.
+        AI-assisted estimation is not available for this portfolio request.
       </p>
     </div>
   )

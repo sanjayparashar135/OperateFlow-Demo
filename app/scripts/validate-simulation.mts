@@ -1,14 +1,25 @@
 /**
- * Focused Build 3 regression checks:
+ * Build 3 + Build 4 regression checks:
  * - Seed portfolio unchanged (12 records, no REQ1235)
  * - Post-submit visibility / KPI expectations for the merged portfolio
  * - Atomic factory produces stable IDs (no duplicate timeline/activity ids)
- * - Duplicate submit protection is a store concern; factory is idempotent by ID
+ * - Estimation accept / override / invalid override / idempotency
+ * - Confirmed status Pending Approval without Execution or developer assignment
  */
 import {
   buildDefaultStructuredRequirements,
   createSubmittedMainRequestBundle,
 } from '../src/data/mainRequestFactory.ts'
+import {
+  applyEstimationConfirmation,
+  hydrateEstimationDecision,
+  validateConfirmEstimationInput,
+} from '../src/data/estimationHelpers.ts'
+import {
+  ESTIMATION_SUGGESTION,
+  ESTIMATION_TIMELINE_EVENT_ID,
+  ESTIMATION_CONFIRMED_ATTENTION,
+} from '../src/data/estimationDataset.ts'
 import {
   DELIVERY_INSIGHTS,
   PORTFOLIO_REQUESTS,
@@ -104,6 +115,12 @@ assert(
   'Target date must be 2026-10-23',
 )
 
+const estimationPending = hydrateEstimationDecision(bundle.estimation)
+assert(
+  estimationPending.decisionState === 'pending_review',
+  'Post-intake estimation must be pending_review',
+)
+
 const timelineIds = bundle.timelineEvents.map((event) => event.id)
 assert(
   new Set(timelineIds).size === timelineIds.length,
@@ -154,6 +171,195 @@ assert(
   `Radhe execution expected 3, got ${radheKpis.inExecution}`,
 )
 
+// --- Build 4: invalid override rejected ---
+assert(
+  validateConfirmEstimationInput({
+    mode: 'overridden',
+    confirmedHours: 60,
+    overrideJustification: '',
+    confirmedApproach: ESTIMATION_SUGGESTION.defaultApproach,
+    decidedById: 'sanjay-parashar',
+    referenceDate: SIMULATED_TODAY,
+  }) !== null,
+  'Empty override justification must be rejected',
+)
+assert(
+  validateConfirmEstimationInput({
+    mode: 'overridden',
+    confirmedHours: 0,
+    overrideJustification: 'Too low',
+    confirmedApproach: ESTIMATION_SUGGESTION.defaultApproach,
+    decidedById: 'sanjay-parashar',
+    referenceDate: SIMULATED_TODAY,
+  }) !== null,
+  'Non-positive override hours must be rejected',
+)
+assert(
+  applyEstimationConfirmation(bundle, {
+    mode: 'overridden',
+    confirmedHours: 72,
+    overrideJustification: '',
+    confirmedApproach: ESTIMATION_SUGGESTION.defaultApproach,
+    decidedById: 'sanjay-parashar',
+    referenceDate: SIMULATED_TODAY,
+  }).ok === false,
+  'applyEstimationConfirmation must reject invalid override',
+)
+
+// --- Build 4: accept path ---
+const acceptResult = applyEstimationConfirmation(bundle, {
+  mode: 'accepted',
+  confirmedApproach: ESTIMATION_SUGGESTION.defaultApproach,
+  decidedById: 'sanjay-parashar',
+  referenceDate: SIMULATED_TODAY,
+})
+assert(acceptResult.ok === true, 'Accept path must succeed')
+if (acceptResult.ok) {
+  const accepted = acceptResult.bundle
+  assert(
+    accepted.estimation?.decisionState === 'confirmed',
+    'Accepted estimation must be confirmed',
+  )
+  assert(accepted.estimation?.mode === 'accepted', 'Mode must be accepted')
+  assert(
+    accepted.estimation?.confirmedHours === ESTIMATION_SUGGESTION.suggestedHours,
+    'Accepted hours must equal suggested 56',
+  )
+  assert(
+    accepted.mainRequest.workflowStatus === 'Pending Approval',
+    'Accepted status must be Pending Approval',
+  )
+  assert(
+    accepted.mainRequest.lifecycleStage === 'Approval & Planning',
+    'Accepted lifecycle must remain Approval & Planning',
+  )
+  assert(
+    accepted.mainRequest.deliveryHealth === 'On Track',
+    'Accepted health must remain On Track',
+  )
+  assert(
+    accepted.mainRequest.primaryOwnerId === 'sanjay-parashar',
+    'Primary owner must remain Sanjay after accept',
+  )
+  assert(
+    accepted.mainRequest.parties.developerId === undefined,
+    'Developer must remain unassigned after accept',
+  )
+  assert(
+    accepted.mainRequest.attentionReasons?.[0] === ESTIMATION_CONFIRMED_ATTENTION,
+    'Attention must explain business approval handoff',
+  )
+  assert(
+    accepted.timelineEvents.filter(
+      (event) => event.id === ESTIMATION_TIMELINE_EVENT_ID,
+    ).length === 1,
+    'Exactly one estimation timeline event after accept',
+  )
+  assert(
+    ESTIMATION_SUGGESTION.breakdown.reduce((sum, item) => sum + item.hours, 0) ===
+      ESTIMATION_SUGGESTION.suggestedHours,
+    'Suggested breakdown must total suggested hours (reference evidence)',
+  )
+
+  const acceptAgain = applyEstimationConfirmation(accepted, {
+    mode: 'accepted',
+    confirmedApproach: ESTIMATION_SUGGESTION.defaultApproach,
+    decidedById: 'sanjay-parashar',
+    referenceDate: SIMULATED_TODAY,
+  })
+  assert(acceptAgain.ok === false, 'Repeated accept must be idempotent (rejected)')
+  assert(
+    accepted.timelineEvents.filter(
+      (event) => event.id === ESTIMATION_TIMELINE_EVENT_ID,
+    ).length === 1,
+    'No duplicate estimation timeline events on repeat',
+  )
+
+  const afterAcceptMerged = [...PORTFOLIO_REQUESTS, accepted.mainRequest]
+  const radheAfterAccept = getPortfolioKpis(
+    getVisibleRequests('radhe-shyam', afterAcceptMerged),
+    SIMULATED_TODAY,
+  )
+  assert(
+    radheAfterAccept.inExecution === 3,
+    `After accept inExecution must stay 3, got ${radheAfterAccept.inExecution}`,
+  )
+  for (const persona of PERSONAS) {
+    const visible = getVisibleRequests(persona.id, afterAcceptMerged)
+    assert(
+      visible.length === expectedPostSubmitVisible[persona.id],
+      `Post-estimate visible for ${persona.id} must match post-submit`,
+    )
+  }
+}
+
+// --- Build 4: override path (fresh pending bundle) ---
+const overrideSource = createSubmittedMainRequestBundle(requirements, SIMULATED_TODAY)
+const overrideResult = applyEstimationConfirmation(overrideSource, {
+  mode: 'overridden',
+  confirmedHours: 64,
+  overrideJustification: 'Additional integration hardening for regional approval.',
+  confirmedApproach: ESTIMATION_SUGGESTION.defaultApproach,
+  decidedById: 'sanjay-parashar',
+  referenceDate: SIMULATED_TODAY,
+})
+assert(overrideResult.ok === true, 'Override path must succeed')
+if (overrideResult.ok) {
+  const overridden = overrideResult.bundle
+  assert(overridden.estimation?.mode === 'overridden', 'Mode must be overridden')
+  assert(
+    overridden.estimation?.confirmedHours === 64,
+    'Confirmed hours must be the revised total',
+  )
+  assert(
+    overridden.estimation?.confirmedHours !== ESTIMATION_SUGGESTION.suggestedHours,
+    'Confirmed override total must differ from suggested total in this case',
+  )
+  assert(
+    overridden.estimation?.overrideJustification?.includes('integration hardening') ===
+      true,
+    'Override justification must be persisted',
+  )
+  assert(
+    overridden.mainRequest.workflowStatus === 'Pending Approval',
+    'Override status must be Pending Approval',
+  )
+  assert(
+    overridden.mainRequest.lifecycleStage === 'Approval & Planning',
+    'Override lifecycle must remain Approval & Planning',
+  )
+  assert(
+    overridden.mainRequest.parties.developerId === undefined,
+    'Developer must remain unassigned after override',
+  )
+  // Suggested breakdown remains static reference — not rewritten as confirmed allocation
+  assert(
+    ESTIMATION_SUGGESTION.suggestedHours === 56,
+    'Static suggested hours must remain 56 as reference evidence',
+  )
+}
+
+// --- Build 3 session hydration (missing estimation field) ---
+const legacyBundle = {
+  ...createSubmittedMainRequestBundle(requirements, SIMULATED_TODAY),
+}
+delete (legacyBundle as { estimation?: unknown }).estimation
+const hydrated = hydrateEstimationDecision(legacyBundle.estimation)
+assert(
+  hydrated.decisionState === 'pending_review',
+  'Missing estimation must hydrate to pending_review',
+)
+const legacyConfirm = applyEstimationConfirmation(
+  { ...legacyBundle, estimation: undefined },
+  {
+    mode: 'accepted',
+    confirmedApproach: ESTIMATION_SUGGESTION.defaultApproach,
+    decidedById: 'sanjay-parashar',
+    referenceDate: SIMULATED_TODAY,
+  },
+)
+assert(legacyConfirm.ok === true, 'Build 3 sessions without estimation must confirm')
+
 // Reset semantics: dropping the submitted request restores seed counts
 const afterReset = PORTFOLIO_REQUESTS
 for (const persona of PERSONAS) {
@@ -176,6 +382,7 @@ const report = {
     ]),
   ),
   radheKpis,
+  suggestionHours: ESTIMATION_SUGGESTION.suggestedHours,
 }
 
 console.log(JSON.stringify(report, null, 2))

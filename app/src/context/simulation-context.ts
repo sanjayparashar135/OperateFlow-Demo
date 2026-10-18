@@ -1,6 +1,8 @@
 import { createContext } from 'react'
+import type { ConfirmEstimationInput } from '../data/estimationHelpers'
 import type { ActivityEntry, DeliveryRequest } from '../types/delivery'
 import type {
+  EstimationDecision,
   LinkedRecord,
   StructuredRequirements,
   SubmittedSimulationBundle,
@@ -12,6 +14,7 @@ export interface RequestBundle {
   requirements: StructuredRequirements
   linkedRecords: LinkedRecord[]
   timelineEvents: TimelineEvent[]
+  estimation: EstimationDecision
 }
 
 export interface SimulationContextValue {
@@ -27,6 +30,11 @@ export interface SimulationContextValue {
    * already exists (duplicate protection).
    */
   submitIntake: (requirements: StructuredRequirements) => boolean
+  /**
+   * Confirm or override the technical estimate. Returns false when the
+   * bundle is missing, already confirmed, or input is invalid.
+   */
+  confirmEstimation: (input: ConfirmEstimationInput) => boolean
   resetDemo: () => void
   /** Exposed for tests / validation helpers. */
   bundle: SubmittedSimulationBundle | null

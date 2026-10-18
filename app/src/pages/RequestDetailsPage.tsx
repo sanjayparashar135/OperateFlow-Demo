@@ -1,6 +1,9 @@
-import { useMemo } from 'react'
+import { useCallback, useMemo } from 'react'
 import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom'
-import { RequestDetailsTabs } from '../components/requests/RequestDetailsTabs'
+import {
+  RequestDetailsTabs,
+  type EstimationFormSubmit,
+} from '../components/requests/RequestDetailsTabs'
 import {
   REQUEST_DETAILS_TABS,
   type RequestDetailsTabId,
@@ -8,11 +11,16 @@ import {
 import { useRole } from '../context/useRole'
 import { useSimulation } from '../context/useSimulation'
 import {
+  buildConfirmEstimationInput,
+  getDefaultEstimationDecision,
+} from '../data/estimationHelpers'
+import {
   getAttentionReasons,
   getRequestById,
   isRequestVisibleToPersona,
 } from '../data/portfolioSelectors'
 import { getSimulatedToday } from '../data/simDate'
+import { MAIN_REQUEST_ID } from '../types/simulation'
 
 function parseTab(value: string | null): RequestDetailsTabId {
   if (
@@ -28,7 +36,7 @@ export function RequestDetailsPage() {
   const { requestId = '' } = useParams()
   const [searchParams, setSearchParams] = useSearchParams()
   const { currentPersona } = useRole()
-  const { requests, getRequestBundle } = useSimulation()
+  const { requests, getRequestBundle, confirmEstimation } = useSimulation()
   const referenceDate = getSimulatedToday()
   const tab = parseTab(searchParams.get('tab'))
 
@@ -38,6 +46,16 @@ export function RequestDetailsPage() {
   )
 
   const bundle = getRequestBundle(requestId)
+  const estimationAvailable = requestId === MAIN_REQUEST_ID && bundle !== null
+
+  const handleConfirmEstimation = useCallback(
+    (form: EstimationFormSubmit) => {
+      return confirmEstimation(
+        buildConfirmEstimationInput(form, currentPersona.id),
+      )
+    },
+    [confirmEstimation, currentPersona.id],
+  )
 
   if (!request) {
     return (
@@ -67,6 +85,7 @@ export function RequestDetailsPage() {
   const requirements = bundle?.requirements ?? null
   const linkedRecords = bundle?.linkedRecords ?? []
   const timelineEvents = bundle?.timelineEvents ?? []
+  const estimation = bundle?.estimation ?? getDefaultEstimationDecision()
 
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-5">
@@ -119,6 +138,10 @@ export function RequestDetailsPage() {
         linkedRecords={linkedRecords}
         timelineEvents={timelineEvents}
         attentionReasons={reasons}
+        estimation={estimationAvailable ? estimation : null}
+        estimationAvailable={estimationAvailable}
+        personaId={currentPersona.id}
+        onConfirmEstimation={handleConfirmEstimation}
       />
     </div>
   )
