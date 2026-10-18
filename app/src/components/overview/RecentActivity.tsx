@@ -3,6 +3,8 @@ import {
   CheckCircle2,
   ClipboardCheck,
   GitBranch,
+  Link2,
+  Sparkles,
   UserPlus,
 } from 'lucide-react'
 import type { ActivityEntry } from '../../types/delivery'
@@ -43,6 +45,16 @@ const CATEGORY_META: Record<
     icon: AlertTriangle,
     className: 'bg-rose-50 text-rose-700',
   },
+  intake: {
+    label: 'Intake',
+    icon: Sparkles,
+    className: 'bg-of-ai-soft text-of-ai',
+  },
+  integration: {
+    label: 'Integration',
+    icon: Link2,
+    className: 'bg-slate-100 text-slate-700',
+  },
 }
 
 export function RecentActivity({
@@ -53,7 +65,7 @@ export function RecentActivity({
     <Panel>
       <PanelHeader
         title="Recent Activity"
-        description="Fictional portfolio updates aligned to active delivery work."
+        description="Recent updates across your visible delivery requests."
       />
 
       <ul className="m-0 flex list-none flex-col gap-3 p-0">

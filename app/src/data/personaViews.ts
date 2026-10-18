@@ -20,10 +20,10 @@ export const PERSONA_VIEW_COPY: Record<PersonaId, PersonaViewCopy> = {
     overviewBlurb: 'Delivery requests you submitted as business requester.',
   },
   'sanjay-parashar': {
-    contextLabel: 'Technical Review',
-    requestsLabel: 'Technical Review',
+    contextLabel: 'Architecture Review',
+    requestsLabel: 'Architecture Review',
     overviewBlurb:
-      'Requests where you are technical lead or primary technical owner.',
+      'Requests where you are solution architect or primary technical owner.',
   },
   'ajay-raj': {
     contextLabel: 'My Assigned Work',

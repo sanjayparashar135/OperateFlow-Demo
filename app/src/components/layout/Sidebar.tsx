@@ -1,4 +1,4 @@
-import { NavLink } from 'react-router-dom'
+import { NavLink, useLocation } from 'react-router-dom'
 import { OperateFlowMark } from '../brand/OperateFlowMark'
 import { NAV_ITEMS } from '../../data/navigation'
 
@@ -7,7 +7,17 @@ interface SidebarProps {
   onNavigate: () => void
 }
 
+function isNavActive(pathname: string, itemPath: string): boolean {
+  if (itemPath === '/') return pathname === '/'
+  if (itemPath === '/requests') {
+    return pathname === '/requests' || pathname.startsWith('/requests/')
+  }
+  return pathname === itemPath || pathname.startsWith(`${itemPath}/`)
+}
+
 export function Sidebar({ open, onNavigate }: SidebarProps) {
+  const { pathname } = useLocation()
+
   return (
     <aside
       className={`fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-of-border bg-of-sidebar transition-transform duration-200 lg:static lg:translate-x-0 ${
@@ -30,19 +40,18 @@ export function Sidebar({ open, onNavigate }: SidebarProps) {
         <ul className="m-0 flex list-none flex-col gap-1 p-0">
           {NAV_ITEMS.map((item) => {
             const Icon = item.icon
+            const active = isNavActive(pathname, item.path)
             return (
               <li key={item.path}>
                 <NavLink
                   to={item.path}
                   end={item.path === '/'}
                   onClick={onNavigate}
-                  className={({ isActive }) =>
-                    `flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
-                      isActive
-                        ? 'bg-of-primary-soft text-of-primary'
-                        : 'text-of-ink-secondary hover:bg-white hover:text-of-ink'
-                    }`
-                  }
+                  className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+                    active
+                      ? 'bg-of-primary-soft text-of-primary'
+                      : 'text-of-ink-secondary hover:bg-white hover:text-of-ink'
+                  }`}
                 >
                   <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
                   <span>{item.label}</span>
@@ -58,7 +67,7 @@ export function Sidebar({ open, onNavigate }: SidebarProps) {
           Northstar Financial Services
         </p>
         <p className="mt-1 text-xs text-of-ink-muted">
-          Concept demonstration
+          Customer Onboarding Portal
         </p>
       </div>
     </aside>

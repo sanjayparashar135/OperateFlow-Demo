@@ -6,6 +6,7 @@ import { getNavItemByPath } from '../../data/navigation'
 import type { PersonaId } from '../../types/persona'
 import { Avatar } from '../ui/Avatar'
 import { IconButton } from '../ui/IconButton'
+import { ResetDemoButton } from './ResetDemoButton'
 import { SimulationBadge } from './SimulationBadge'
 
 interface HeaderProps {
@@ -75,6 +76,7 @@ export function Header({ sidebarOpen, onToggleSidebar }: HeaderProps) {
 
       <div className="flex items-center gap-2 sm:gap-3">
         <SimulationBadge />
+        <ResetDemoButton />
 
         <label className="sr-only" htmlFor="role-switcher">
           Switch persona
@@ -111,7 +113,7 @@ export function Header({ sidebarOpen, onToggleSidebar }: HeaderProps) {
             >
               <p className="text-sm font-semibold text-of-ink">Notifications</p>
               <p className="mt-2 text-sm leading-relaxed text-of-ink-muted">
-                No new notifications — simulation
+                No new notifications
               </p>
             </div>
           ) : null}

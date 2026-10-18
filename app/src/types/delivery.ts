@@ -56,6 +56,8 @@ export type ActivityCategory =
   | 'progress'
   | 'uat_release'
   | 'risk'
+  | 'intake'
+  | 'integration'
 
 export interface ActivityEntry {
   id: string

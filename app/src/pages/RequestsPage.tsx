@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useRef } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { Sparkles } from 'lucide-react'
+import { Plus, Sparkles } from 'lucide-react'
 import { RequestSummaryModal } from '../components/requests/RequestSummaryModal'
 import { RequestsPortfolioTable } from '../components/requests/RequestsPortfolioTable'
 import { Panel } from '../components/ui/Panel'
 import { useRole } from '../context/useRole'
+import { useSimulation } from '../context/useSimulation'
+import { canCreateRequest } from '../data/capabilities'
 import { getPersonaViewCopy } from '../data/personaViews'
 import {
   applyRequestsViewPreset,
@@ -16,11 +18,13 @@ import { useRequestSummary } from '../hooks/useRequestSummary'
 
 export function RequestsPage() {
   const { currentPersona } = useRole()
+  const { requests, hasMainRequest, mainRequestId } = useSimulation()
   const [searchParams, setSearchParams] = useSearchParams()
   const referenceDate = getSimulatedToday()
   const viewCopy = getPersonaViewCopy(currentPersona.id)
-  const summary = useRequestSummary(currentPersona.id, referenceDate)
+  const summary = useRequestSummary(currentPersona.id, requests, referenceDate)
   const previousPersonaId = useRef(currentPersona.id)
+  const showIntakeEntry = canCreateRequest(currentPersona.id)
 
   const view = parseRequestsViewPreset(searchParams.get('view'))
 
@@ -39,8 +43,8 @@ export function RequestsPage() {
   }, [currentPersona.id, setSearchParams])
 
   const visible = useMemo(
-    () => getVisibleRequests(currentPersona.id),
-    [currentPersona.id],
+    () => getVisibleRequests(currentPersona.id, requests),
+    [currentPersona.id, requests],
   )
 
   const listed = useMemo(
@@ -74,28 +78,41 @@ export function RequestsPage() {
         </p>
       </header>
 
-      <Panel className="border-of-ai-border bg-of-ai-soft/40">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-of-ai" aria-hidden="true" />
-              <p className="m-0 text-sm font-semibold text-of-ai">
-                Intelligent Intake — coming soon
+      {showIntakeEntry ? (
+        <Panel className="border-of-ai-border bg-of-ai-soft/40">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-of-ai" aria-hidden="true" />
+                <p className="m-0 text-sm font-semibold text-of-ai">
+                  Intelligent Intake
+                </p>
+              </div>
+              <p className="mt-2 text-sm leading-relaxed text-of-ink-secondary">
+                {hasMainRequest
+                  ? `${mainRequestId} is already in your portfolio. Open the request or use Reset Demo in the header to start again.`
+                  : 'Start a guided clarification with the AI Intake Assistant to create a structured enhancement request.'}
               </p>
             </div>
-            <p className="mt-2 text-sm leading-relaxed text-of-ink-secondary">
-              The + New Request path will open a guided intake conversation in
-              the next milestone. This page remains a read-only portfolio view.
-            </p>
+            {hasMainRequest && mainRequestId ? (
+              <Link
+                to={`/requests/${mainRequestId}`}
+                className="inline-flex shrink-0 items-center justify-center rounded-lg bg-of-primary px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-of-primary-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-of-primary"
+              >
+                Open {mainRequestId}
+              </Link>
+            ) : (
+              <Link
+                to="/requests/new"
+                className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg bg-of-primary px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-of-primary-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-of-primary"
+              >
+                <Plus className="h-4 w-4" aria-hidden="true" />
+                New Request
+              </Link>
+            )}
           </div>
-          <Link
-            to="/"
-            className="shrink-0 text-sm font-semibold text-of-primary hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-of-primary"
-          >
-            Back to Overview
-          </Link>
-        </div>
-      </Panel>
+        </Panel>
+      ) : null}
 
       <RequestsPortfolioTable
         key={currentPersona.id}

@@ -10,6 +10,7 @@ import { getSimulatedToday } from '../data/simDate'
 
 export function useRequestSummary(
   personaId: PersonaId,
+  requests: DeliveryRequest[],
   referenceDate: string = getSimulatedToday(),
 ) {
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -22,11 +23,11 @@ export function useRequestSummary(
 
   const request = useMemo(() => {
     if (!selectedId) return null
-    const found = getRequestById(selectedId) ?? null
+    const found = getRequestById(selectedId, requests) ?? null
     if (!found) return null
     if (!isRequestVisibleToPersona(found, personaId)) return null
     return found
-  }, [selectedId, personaId])
+  }, [selectedId, personaId, requests])
 
   const reasons = useMemo(
     () => (request ? getAttentionReasons(request, referenceDate) : []),

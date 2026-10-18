@@ -23,9 +23,7 @@ export function PagePlaceholder({ title, description }: PagePlaceholderProps) {
         <p className="mt-6 border-t border-of-border pt-4 text-sm text-of-ink-muted">
           Viewing as {currentPersona.name} · {currentPersona.role}
         </p>
-        <p className="mt-2 text-sm text-of-ink-muted">
-          Feature content for this area will be added in a later milestone.
-        </p>
+        <p className="mt-2 text-sm text-of-ink-muted">Coming soon.</p>
       </div>
     </div>
   )

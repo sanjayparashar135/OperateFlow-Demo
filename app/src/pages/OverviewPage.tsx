@@ -7,6 +7,7 @@ import { OverviewHeader } from '../components/overview/OverviewHeader'
 import { RecentActivity } from '../components/overview/RecentActivity'
 import { RequestSummaryModal } from '../components/requests/RequestSummaryModal'
 import { useRole } from '../context/useRole'
+import { useSimulation } from '../context/useSimulation'
 import {
   getAttentionItems,
   getLifecycleDistribution,
@@ -20,11 +21,12 @@ import { useRequestSummary } from '../hooks/useRequestSummary'
 
 export function OverviewPage() {
   const { currentPersona } = useRole()
+  const { requests, activity: portfolioActivity } = useSimulation()
   const referenceDate = getSimulatedToday()
 
   const visible = useMemo(
-    () => getVisibleRequests(currentPersona.id),
-    [currentPersona.id],
+    () => getVisibleRequests(currentPersona.id, requests),
+    [currentPersona.id, requests],
   )
   const kpis = useMemo(
     () => getPortfolioKpis(visible, referenceDate),
@@ -42,8 +44,15 @@ export function OverviewPage() {
     () => getScopedInsights(visible, undefined, 2),
     [visible],
   )
-  const activity = useMemo(() => getScopedActivity(visible), [visible])
-  const summary = useRequestSummary(currentPersona.id, referenceDate)
+  const activity = useMemo(
+    () => getScopedActivity(visible, portfolioActivity),
+    [visible, portfolioActivity],
+  )
+  const summary = useRequestSummary(
+    currentPersona.id,
+    requests,
+    referenceDate,
+  )
 
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-5">

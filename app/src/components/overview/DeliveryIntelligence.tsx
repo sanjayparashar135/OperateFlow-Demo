@@ -22,11 +22,11 @@ export function DeliveryIntelligence({
     <Panel className="border-of-ai-border bg-gradient-to-br from-of-surface to-of-ai-soft/40">
       <PanelHeader
         title="Delivery Intelligence"
-        description="Scripted insights for your visible requests — not live AI."
+        description="Priority signals across your visible requests."
         action={
           <span className="inline-flex items-center gap-1.5 rounded-md bg-of-ai-soft px-2 py-1 text-xs font-medium text-of-ai ring-1 ring-of-ai-border">
             <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
-            Simulated
+            AI insights
           </span>
         }
       />

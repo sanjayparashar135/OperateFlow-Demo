@@ -106,7 +106,7 @@ export const PORTFOLIO_REQUESTS: DeliveryRequest[] = [
       'Add retry and dead-letter handling for claims status webhooks to partner systems.',
     attentionReasons: [
       'Technical review pending',
-      'Target date within three days of simulated today',
+      'Target date within three days',
     ],
   },
   {
@@ -148,7 +148,7 @@ export const PORTFOLIO_REQUESTS: DeliveryRequest[] = [
       'Sync weekend ATM and branch hours from facilities feed into Branch Finder.',
     attentionReasons: [
       'Delivery health Delayed',
-      'Target date within three days of simulated today',
+      'Target date within three days',
     ],
   },
   {

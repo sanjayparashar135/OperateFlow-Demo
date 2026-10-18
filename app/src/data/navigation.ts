@@ -55,7 +55,7 @@ export const NAV_ITEMS: NavItem[] = [
     label: 'Follow-ups',
     title: 'Follow-ups',
     description:
-      'Simulated Teams-style status checks and developer responses within OperateFlow.',
+      'Teams-style status checks and developer responses within OperateFlow.',
     icon: MessageSquare,
   },
   {
@@ -63,7 +63,7 @@ export const NAV_ITEMS: NavItem[] = [
     label: 'Meetings',
     title: 'Meetings',
     description:
-      'Natural-language meeting preparation with simulated attendees, agenda, and time slots.',
+      'Natural-language meeting preparation with attendees, agenda, and proposed time slots.',
     icon: CalendarDays,
   },
   {
@@ -80,6 +80,28 @@ export function getNavItemByPath(pathname: string): NavItem {
   const exact = NAV_ITEMS.find((item) => item.path === pathname)
   if (exact) {
     return exact
+  }
+
+  if (pathname === '/requests/new') {
+    return {
+      path: '/requests/new',
+      label: 'New Request',
+      title: 'Intelligent Intake',
+      description:
+        'Guided AI Intake Assistant clarification to create a structured enhancement request.',
+      icon: ClipboardList,
+    }
+  }
+
+  if (pathname.startsWith('/requests/')) {
+    return {
+      path: pathname,
+      label: 'Request Details',
+      title: 'Request Details',
+      description:
+        'Unified request summary, requirements, activity timeline, and linked records.',
+      icon: ClipboardList,
+    }
   }
 
   return NAV_ITEMS[0]

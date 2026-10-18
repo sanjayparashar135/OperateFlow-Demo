@@ -28,7 +28,7 @@ export function getPartyDisplayRows(request: DeliveryRequest): PartyDisplayRow[]
   }
   if (parties.technicalLeadId) {
     rows.push({
-      label: 'Technical lead',
+      label: 'Solution architect',
       name: personaDisplayName(parties.technicalLeadId),
     })
   }
