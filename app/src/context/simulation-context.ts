@@ -6,6 +6,7 @@ import type {
 } from '../data/blockerResolutionHelpers'
 import type { ConfirmEstimationInput } from '../data/estimationHelpers'
 import type { FollowUpResponseInput } from '../data/followUpHelpers'
+import type { ConfirmMeetingInput } from '../data/meetingHelpers'
 import type { ActivityEntry, DeliveryRequest } from '../types/delivery'
 import type { PersonaId } from '../types/persona'
 import type {
@@ -13,6 +14,7 @@ import type {
   AssignmentRecord,
   BlockerResolutionRecord,
   CollaborationChannelId,
+  ConfirmedMeetingRecord,
   EstimationDecision,
   ExecutionState,
   FollowUpRecord,
@@ -33,6 +35,7 @@ export interface RequestBundle {
   execution: ExecutionState | undefined
   followUp: FollowUpRecord | undefined
   blockerResolution: BlockerResolutionRecord
+  meeting: ConfirmedMeetingRecord | undefined
 }
 
 export interface SimulationContextValue {
@@ -79,6 +82,8 @@ export interface SimulationContextValue {
   selectCoordinationActions: (input: SelectCoordinationInput) => boolean
   /** Radhe confirms business-facing stakeholder communication. */
   confirmStakeholderCommunication: (input: ConfirmStakeholderInput) => boolean
+  /** Radhe confirms an AI-assisted coordination meeting. */
+  confirmMeeting: (input: ConfirmMeetingInput) => boolean
   resetDemo: () => void
   /** Exposed for tests / validation helpers. */
   bundle: SubmittedSimulationBundle | null

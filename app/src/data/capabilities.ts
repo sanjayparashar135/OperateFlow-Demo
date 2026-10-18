@@ -65,3 +65,11 @@ export function canConfirmStakeholderCommunication(
 ): boolean {
   return personaId === 'radhe-shyam'
 }
+
+/**
+ * Demo persona capability: only Radhe Shyam may confirm AI-assisted
+ * coordination meetings. Not production RBAC.
+ */
+export function canConfirmMeeting(personaId: PersonaId): boolean {
+  return personaId === 'radhe-shyam'
+}

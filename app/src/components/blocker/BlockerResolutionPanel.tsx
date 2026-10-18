@@ -3,6 +3,7 @@ import type { PersonaId } from '../../types/persona'
 import type {
   BlockerResolutionRecord,
   CollaborationChannelId,
+  ConfirmedMeetingRecord,
   CoordinationActionId,
   DiagnosticDirectionId,
 } from '../../types/simulation'
@@ -12,6 +13,7 @@ import {
   canSelectCoordinationActions,
 } from '../../data/capabilities'
 import type { ConfirmStakeholderInput } from '../../data/blockerResolutionHelpers'
+import { ScheduledMeetingAssociation } from '../meetings/ScheduledMeetingAssociation'
 import { BusinessStatusPanel } from './BusinessStatusPanel'
 import { DeliveryRiskCoordination } from './DeliveryRiskCoordination'
 import { TroubleshootingAssistant } from './TroubleshootingAssistant'
@@ -21,6 +23,7 @@ interface BlockerResolutionPanelProps {
   personaId: PersonaId
   blockerResolution: BlockerResolutionRecord
   channelId: CollaborationChannelId
+  meeting: ConfirmedMeetingRecord | undefined
   onRecordTroubleshooting: (input: {
     directionId: DiagnosticDirectionId
     progressNote: string
@@ -40,17 +43,21 @@ export function BlockerResolutionPanel({
   personaId,
   blockerResolution,
   channelId,
+  meeting,
   onRecordTroubleshooting,
   onSaveCoordination,
   onConfirmCommunication,
 }: BlockerResolutionPanelProps) {
   if (personaId === 'ajay-raj') {
     return (
-      <TroubleshootingAssistant
-        blockerResolution={blockerResolution}
-        canRecord={canRecordTroubleshooting(personaId)}
-        onRecord={onRecordTroubleshooting}
-      />
+      <div className="flex flex-col gap-4">
+        <TroubleshootingAssistant
+          blockerResolution={blockerResolution}
+          canRecord={canRecordTroubleshooting(personaId)}
+          onRecord={onRecordTroubleshooting}
+        />
+        {meeting ? <ScheduledMeetingAssociation meeting={meeting} /> : null}
+      </div>
     )
   }
 
@@ -60,6 +67,7 @@ export function BlockerResolutionPanel({
         request={request}
         blockerResolution={blockerResolution}
         channelId={channelId}
+        meeting={meeting}
         canCoordinate={
           canSelectCoordinationActions(personaId) &&
           canConfirmStakeholderCommunication(personaId)
@@ -82,6 +90,7 @@ export function BlockerResolutionPanel({
       <BusinessStatusPanel
         request={request}
         blockerResolution={blockerResolution}
+        meeting={meeting}
       />
     )
   }
@@ -116,6 +125,11 @@ export function BlockerResolutionPanel({
           Business-facing stakeholder update has not been confirmed yet.
         </p>
       )}
+      {meeting ? (
+        <div className="mt-3">
+          <ScheduledMeetingAssociation meeting={meeting} />
+        </div>
+      ) : null}
     </section>
   )
 }

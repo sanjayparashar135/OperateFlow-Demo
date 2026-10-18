@@ -39,6 +39,28 @@ export type TimelineEventCategory =
   | 'estimation'
   | 'follow_up'
   | 'communication'
+  | 'meeting'
+
+export type MeetingStatus = 'scheduled'
+
+/** Human-confirmed simulated meeting for REQ1235 blocker coordination. */
+export interface ConfirmedMeetingRecord {
+  id: string
+  requestId: string
+  status: MeetingStatus
+  title: string
+  purpose: string
+  meetingDate: string
+  startTime: string
+  endTime: string
+  durationMinutes: number
+  organizerId: PersonaId
+  attendeeIds: PersonaId[]
+  agenda: string[]
+  scheduleNote: string | null
+  confirmedById: PersonaId
+  confirmedAt: string
+}
 
 export type CollaborationChannelId = 'teams' | 'slack'
 
@@ -196,6 +218,8 @@ export interface SubmittedSimulationBundle {
   followUp?: FollowUpRecord
   /** Optional; Build 6 blocker resolution human decisions. */
   blockerResolution?: BlockerResolutionRecord
+  /** Optional; Build 7 human-confirmed coordination meeting. */
+  meeting?: ConfirmedMeetingRecord
 }
 
 export const MAIN_REQUEST_ID = 'REQ1235'

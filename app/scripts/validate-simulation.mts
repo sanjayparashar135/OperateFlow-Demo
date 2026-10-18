@@ -1,5 +1,5 @@
 /**
- * Build 3–6 regression checks:
+ * Build 3–7 regression checks:
  * - Seed portfolio unchanged (12 records, no REQ1235)
  * - Estimation accept / override / invalid override / idempotency
  * - John business approval → Approved — Awaiting Assignment
@@ -8,6 +8,7 @@
  * - Developer responses including I'm Blocked
  * - Collaboration channel presentation defaults to Teams
  * - Build 6 blocker troubleshooting, coordination, stakeholder communication
+ * - Build 7 smart meeting confirmation and attendee visibility
  */
 import {
   applyBusinessApproval,
@@ -61,6 +62,20 @@ import {
   FOLLOW_UP_RESPONSE_TIMELINE_EVENT_ID,
 } from '../src/data/followUpDataset.ts'
 import {
+  MEETING_ACTIVITY_ID,
+  MEETING_DEFAULT_AGENDA,
+  MEETING_DEFAULT_TITLE,
+  MEETING_ID,
+  MEETING_SAMPLE_PROMPT,
+  MEETING_TIMELINE_EVENT_ID,
+} from '../src/data/meetingDataset.ts'
+import {
+  applyMeetingConfirmation,
+  hydrateMeeting,
+  isMeetingVisibleToPersona,
+  parseMeetingIntent,
+} from '../src/data/meetingHelpers.ts'
+import {
   DELIVERY_INSIGHTS,
   PORTFOLIO_REQUESTS,
   RECENT_ACTIVITY,
@@ -69,6 +84,7 @@ import {
   EXPECTED_PERSONA_VISIBLE_COUNTS,
   getPortfolioKpis,
   getVisibleRequests,
+  isRequestVisibleToPersona,
   validatePortfolioConsistency,
 } from '../src/data/portfolioSelectors.ts'
 import { PERSONAS } from '../src/data/personas.ts'
@@ -884,6 +900,261 @@ if (acceptResult.ok) {
             confirmWithoutTroubleshoot.ok === true,
             'Radhe confirm does not require Ajay troubleshooting first',
           )
+
+          // --- Build 7: smart meeting ---
+          const intent = parseMeetingIntent(
+            MEETING_SAMPLE_PROMPT,
+            SIMULATED_ADVANCE_DATE,
+          )
+          assert(intent.ok === true, 'Sample meeting intent must be recognized')
+          if (intent.ok) {
+            assert(
+              intent.suggestion.meetingDate === '2026-10-22',
+              'Sample intent resolves to October 22',
+            )
+            assert(
+              intent.suggestion.startTime === '10:00' &&
+                intent.suggestion.endTime === '10:30',
+              'Sample intent resolves to 10:00–10:30',
+            )
+          }
+
+          assert(
+            parseMeetingIntent('schedule lunch with everyone', SIMULATED_ADVANCE_DATE)
+              .ok === false,
+            'Unsupported NL intent must fail honestly',
+          )
+
+          const meetingBase = blockedBase
+          assert(
+            hydrateMeeting(undefined) === undefined,
+            'Legacy bundles hydrate without inventing a meeting',
+          )
+
+          assert(
+            applyMeetingConfirmation(structuredClone(meetingBase), {
+              title: MEETING_DEFAULT_TITLE,
+              purpose: 'Coordinate investigation',
+              meetingDate: '2026-10-22',
+              startTime: '10:00',
+              durationMinutes: 30,
+              attendeeIds: [
+                'radhe-shyam',
+                'ajay-raj',
+                'sreekanth-mamdekar',
+              ],
+              agenda: [...MEETING_DEFAULT_AGENDA],
+              scheduleNote: null,
+              confirmedById: 'ajay-raj',
+              referenceDate: SIMULATED_ADVANCE_DATE,
+            }).ok === false,
+            'Ajay cannot confirm a meeting',
+          )
+
+          assert(
+            applyMeetingConfirmation(structuredClone(meetingBase), {
+              title: '',
+              purpose: 'Coordinate investigation',
+              meetingDate: '2026-10-22',
+              startTime: '10:00',
+              durationMinutes: 30,
+              attendeeIds: [
+                'radhe-shyam',
+                'ajay-raj',
+                'sreekanth-mamdekar',
+              ],
+              agenda: [...MEETING_DEFAULT_AGENDA],
+              scheduleNote: null,
+              confirmedById: 'radhe-shyam',
+              referenceDate: SIMULATED_ADVANCE_DATE,
+            }).ok === false,
+            'Empty title must be rejected',
+          )
+
+          assert(
+            applyMeetingConfirmation(structuredClone(meetingBase), {
+              title: MEETING_DEFAULT_TITLE,
+              purpose: 'Coordinate investigation',
+              meetingDate: '2026-10-20',
+              startTime: '10:00',
+              durationMinutes: 30,
+              attendeeIds: [
+                'radhe-shyam',
+                'ajay-raj',
+                'sreekanth-mamdekar',
+              ],
+              agenda: [...MEETING_DEFAULT_AGENDA],
+              scheduleNote: null,
+              confirmedById: 'radhe-shyam',
+              referenceDate: SIMULATED_ADVANCE_DATE,
+            }).ok === false,
+            'Meeting before simulated date must be rejected',
+          )
+
+          assert(
+            applyMeetingConfirmation(structuredClone(meetingBase), {
+              title: MEETING_DEFAULT_TITLE,
+              purpose: 'Coordinate investigation',
+              meetingDate: '2026-10-22',
+              startTime: '10:00',
+              durationMinutes: 30,
+              attendeeIds: ['radhe-shyam'],
+              agenda: [...MEETING_DEFAULT_AGENDA],
+              scheduleNote: null,
+              confirmedById: 'radhe-shyam',
+              referenceDate: SIMULATED_ADVANCE_DATE,
+            }).ok === false,
+            'Organizer-only attendee list must be rejected',
+          )
+
+          const editedTitle = 'Edited Blocker Resolution Working Session'
+          const meetingConfirmed = applyMeetingConfirmation(
+            structuredClone(meetingBase),
+            {
+              title: editedTitle,
+              purpose: 'Focus the technical investigation owners.',
+              meetingDate: '2026-10-22',
+              startTime: '10:00',
+              durationMinutes: 30,
+              attendeeIds: [
+                'radhe-shyam',
+                'ajay-raj',
+                'sreekanth-mamdekar',
+              ],
+              agenda: [...MEETING_DEFAULT_AGENDA],
+              scheduleNote: 'Recommended demo slot for October 22 (not calendar-verified).',
+              confirmedById: 'radhe-shyam',
+              referenceDate: SIMULATED_ADVANCE_DATE,
+            },
+          )
+          assert(meetingConfirmed.ok === true, 'Radhe can confirm meeting')
+          if (meetingConfirmed.ok) {
+            const mtg = meetingConfirmed.bundle.meeting
+            assert(mtg?.id === MEETING_ID, 'Meeting id stable')
+            assert(mtg?.title === editedTitle, 'Edited title retained')
+            assert(mtg?.status === 'scheduled', 'Meeting status scheduled')
+            assert(
+              mtg?.attendeeIds.includes('ajay-raj') === true &&
+                mtg?.attendeeIds.includes('sreekanth-mamdekar') === true,
+              'Ajay and Sreekanth are attendees',
+            )
+            assert(
+              mtg !== undefined &&
+                isMeetingVisibleToPersona(mtg, 'ajay-raj') &&
+                isMeetingVisibleToPersona(mtg, 'sreekanth-mamdekar'),
+              'Ajay and Sreekanth can see the meeting',
+            )
+            assert(
+              mtg !== undefined &&
+                isMeetingVisibleToPersona(mtg, 'sanjay-parashar') === false,
+              'Sanjay cannot see meeting when not selected',
+            )
+            assert(
+              mtg !== undefined &&
+                isMeetingVisibleToPersona(mtg, 'john-harrison') === false,
+              'John is not an attendee by default',
+            )
+            assert(
+              meetingConfirmed.bundle.mainRequest.parties.integrationLeadId ===
+                undefined,
+              'Meeting does not mutate RequestParties integrationLeadId',
+            )
+            assert(
+              isRequestVisibleToPersona(
+                meetingConfirmed.bundle.mainRequest,
+                'sreekanth-mamdekar',
+              ) === false,
+              'Sreekanth still cannot see REQ1235 via request visibility',
+            )
+            assert(
+              meetingConfirmed.bundle.followUp?.responseDetail ===
+                BLOCKED_TECHNICAL_DETAIL,
+              'Original blocker unchanged after meeting',
+            )
+            assert(
+              meetingConfirmed.bundle.mainRequest.lifecycleStage ===
+                'Execution' &&
+                meetingConfirmed.bundle.mainRequest.workflowStatus ===
+                  'Blocked' &&
+                meetingConfirmed.bundle.mainRequest.deliveryHealth ===
+                  'At Risk' &&
+                meetingConfirmed.bundle.mainRequest.targetDate === '2026-10-23',
+              'REQ1235 remains Execution / Blocked / At Risk with Oct 23 target',
+            )
+            assert(
+              meetingConfirmed.bundle.timelineEvents.filter(
+                (e) => e.id === MEETING_TIMELINE_EVENT_ID,
+              ).length === 1,
+              'Exactly one meeting timeline event',
+            )
+            assert(
+              meetingConfirmed.bundle.activityEntries.filter(
+                (e) => e.id === MEETING_ACTIVITY_ID,
+              ).length === 1,
+              'Exactly one meeting activity entry',
+            )
+            assert(
+              applyMeetingConfirmation(
+                structuredClone(meetingConfirmed.bundle),
+                {
+                  title: 'Duplicate',
+                  purpose: 'Should fail',
+                  meetingDate: '2026-10-22',
+                  startTime: '10:00',
+                  durationMinutes: 30,
+                  attendeeIds: [
+                    'radhe-shyam',
+                    'ajay-raj',
+                    'sreekanth-mamdekar',
+                  ],
+                  agenda: [...MEETING_DEFAULT_AGENDA],
+                  scheduleNote: null,
+                  confirmedById: 'radhe-shyam',
+                  referenceDate: SIMULATED_ADVANCE_DATE,
+                },
+              ).ok === false,
+              'Duplicate meeting confirmation rejected',
+            )
+
+            const withSanjay = applyMeetingConfirmation(
+              structuredClone(meetingBase),
+              {
+                title: MEETING_DEFAULT_TITLE,
+                purpose: 'Include architect',
+                meetingDate: '2026-10-22',
+                startTime: '10:00',
+                durationMinutes: 30,
+                attendeeIds: [
+                  'radhe-shyam',
+                  'ajay-raj',
+                  'sreekanth-mamdekar',
+                  'sanjay-parashar',
+                ],
+                agenda: [...MEETING_DEFAULT_AGENDA],
+                scheduleNote: null,
+                confirmedById: 'radhe-shyam',
+                referenceDate: SIMULATED_ADVANCE_DATE,
+              },
+            )
+            assert(withSanjay.ok === true, 'Optional Sanjay attendee allowed')
+            if (withSanjay.ok && withSanjay.bundle.meeting) {
+              assert(
+                isMeetingVisibleToPersona(
+                  withSanjay.bundle.meeting,
+                  'sanjay-parashar',
+                ),
+                'Sanjay sees meeting when selected',
+              )
+            }
+
+            const rehydratedMeeting = hydrateMeeting(
+              meetingConfirmed.bundle.meeting,
+            )
+            assert(
+              rehydratedMeeting?.title === editedTitle,
+              'Meeting survives hydrate/refresh',
+            )
+          }
         }
 
         assert(

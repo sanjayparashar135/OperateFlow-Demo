@@ -4,6 +4,7 @@ import { Sparkles } from 'lucide-react'
 import type {
   BlockerResolutionRecord,
   CollaborationChannelId,
+  ConfirmedMeetingRecord,
   CoordinationActionId,
 } from '../../types/simulation'
 import {
@@ -14,6 +15,7 @@ import {
   getCoordinationAction,
   STAKEHOLDER_RECIPIENT_ID,
 } from '../../data/blockerCoordinationDataset'
+import { ScheduledMeetingAssociation } from '../meetings/ScheduledMeetingAssociation'
 import { getDiagnosticDirection } from '../../data/blockerTroubleshootingDataset'
 import { BLOCKED_TECHNICAL_DETAIL } from '../../data/followUpDataset'
 import { formatDisplayDate, formatDisplayDateTime } from '../../lib/format'
@@ -24,6 +26,7 @@ interface DeliveryRiskCoordinationProps {
   request: DeliveryRequest
   blockerResolution: BlockerResolutionRecord
   channelId: CollaborationChannelId
+  meeting: ConfirmedMeetingRecord | undefined
   canCoordinate: boolean
   onSaveCoordination: (actionIds: CoordinationActionId[]) => boolean
   onConfirmCommunication: (input: {
@@ -38,6 +41,7 @@ export function DeliveryRiskCoordination({
   request,
   blockerResolution,
   channelId,
+  meeting,
   canCoordinate,
   onSaveCoordination,
   onConfirmCommunication,
@@ -128,17 +132,23 @@ export function DeliveryRiskCoordination({
             )}
           </p>
         ) : null}
-        <div className="mt-4 rounded-lg border border-dashed border-of-ai-border bg-of-ai-soft/40 px-3 py-3">
-          <p className="m-0 text-sm text-of-ink-secondary">
-            {BUILD7_MEETING_HANDOFF}
-          </p>
-          <Link
-            to="/meetings"
-            className="mt-2 inline-flex text-sm font-semibold text-of-ai hover:underline"
-          >
-            Open Meetings
-          </Link>
-        </div>
+        {meeting ? (
+          <div className="mt-4">
+            <ScheduledMeetingAssociation meeting={meeting} />
+          </div>
+        ) : (
+          <div className="mt-4 rounded-lg border border-dashed border-of-ai-border bg-of-ai-soft/40 px-3 py-3">
+            <p className="m-0 text-sm text-of-ink-secondary">
+              {BUILD7_MEETING_HANDOFF}
+            </p>
+            <Link
+              to="/meetings"
+              className="mt-2 inline-flex text-sm font-semibold text-of-ai hover:underline"
+            >
+              Coordinate Resolution Meeting
+            </Link>
+          </div>
+        )}
       </section>
     )
   }

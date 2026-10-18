@@ -1,9 +1,8 @@
-import { Link } from 'react-router-dom'
-import type { BlockerResolutionRecord } from '../../types/simulation'
-import {
-  BUILD7_MEETING_HANDOFF,
-  getCoordinationAction,
-} from '../../data/blockerCoordinationDataset'
+import type {
+  BlockerResolutionRecord,
+  ConfirmedMeetingRecord,
+} from '../../types/simulation'
+import { getCoordinationAction } from '../../data/blockerCoordinationDataset'
 import { formatDisplayDate } from '../../lib/format'
 import type { DeliveryRequest } from '../../types/delivery'
 import { Badge, HealthBadge } from '../ui/Badge'
@@ -11,11 +10,13 @@ import { Badge, HealthBadge } from '../ui/Badge'
 interface BusinessStatusPanelProps {
   request: DeliveryRequest
   blockerResolution: BlockerResolutionRecord
+  meeting: ConfirmedMeetingRecord | undefined
 }
 
 export function BusinessStatusPanel({
   request,
   blockerResolution,
+  meeting,
 }: BusinessStatusPanelProps) {
   const communication = blockerResolution.stakeholderCommunication
   const confirmed = communication.decisionState === 'confirmed'
@@ -107,17 +108,19 @@ export function BusinessStatusPanel({
         </div>
       ) : null}
 
-      <div className="mt-4 rounded-lg border border-dashed border-of-border bg-of-canvas/40 px-3 py-3">
-        <p className="m-0 text-sm text-of-ink-secondary">
-          {BUILD7_MEETING_HANDOFF}
-        </p>
-        <Link
-          to="/meetings"
-          className="mt-2 inline-flex text-sm font-semibold text-of-primary hover:underline"
-        >
-          Open Meetings
-        </Link>
-      </div>
+      {meeting ? (
+        <div className="mt-4 rounded-lg border border-of-border bg-of-canvas/40 px-3 py-3">
+          <p className="m-0 text-sm font-semibold text-of-ink">
+            Technical coordination underway
+          </p>
+          <p className="mt-1 m-0 text-sm text-of-ink-secondary">
+            A technical coordination meeting has been arranged for{' '}
+            {formatDisplayDate(meeting.meetingDate)} to progress investigation
+            of the delivery risk. The October 23 target remains under
+            assessment.
+          </p>
+        </div>
+      ) : null}
     </section>
   )
 }

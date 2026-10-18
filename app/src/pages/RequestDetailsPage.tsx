@@ -165,6 +165,7 @@ export function RequestDetailsPage() {
         personaId={currentPersona.id}
         blockerResolution={bundle.blockerResolution}
         channelId={collaborationChannelId}
+        meeting={bundle.meeting}
         onRecordTroubleshooting={handleRecordTroubleshooting}
         onSaveCoordination={handleSaveCoordination}
         onConfirmCommunication={handleConfirmCommunication}

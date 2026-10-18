@@ -35,6 +35,11 @@ import {
   hydrateFollowUp,
   type FollowUpResponseInput,
 } from '../data/followUpHelpers'
+import {
+  applyMeetingConfirmation,
+  hydrateMeeting,
+  type ConfirmMeetingInput,
+} from '../data/meetingHelpers'
 import { createSubmittedMainRequestBundle } from '../data/mainRequestFactory'
 import { PORTFOLIO_REQUESTS, RECENT_ACTIVITY } from '../data/portfolio'
 import {
@@ -89,6 +94,7 @@ function hydrateBundle(
     assignment: hydrateAssignmentRecord(withApproval),
     followUp: hydrateFollowUp(bundle.followUp),
     blockerResolution: hydrateBlockerResolution(bundle.blockerResolution),
+    meeting: hydrateMeeting(bundle.meeting),
   }
 }
 
@@ -201,6 +207,7 @@ export function SimulationProvider({ children }: { children: ReactNode }) {
         execution: hydrated.execution,
         followUp: hydrated.followUp,
         blockerResolution: hydrateBlockerResolution(hydrated.blockerResolution),
+        meeting: hydrateMeeting(hydrated.meeting),
       }
     },
     [bundle],
@@ -325,6 +332,17 @@ export function SimulationProvider({ children }: { children: ReactNode }) {
     [bundle],
   )
 
+  const confirmMeeting = useCallback(
+    (input: ConfirmMeetingInput) => {
+      if (bundle === null) return false
+      const result = applyMeetingConfirmation(bundle, input)
+      if (!result.ok) return false
+      setBundle(result.bundle)
+      return true
+    },
+    [bundle],
+  )
+
   const resetDemo = useCallback(() => {
     clearStored()
     setBundle(null)
@@ -350,6 +368,7 @@ export function SimulationProvider({ children }: { children: ReactNode }) {
       recordTroubleshootingProgress,
       selectCoordinationActions,
       confirmStakeholderCommunication,
+      confirmMeeting,
       resetDemo,
       bundle,
     }),
@@ -370,6 +389,7 @@ export function SimulationProvider({ children }: { children: ReactNode }) {
       recordTroubleshootingProgress,
       selectCoordinationActions,
       confirmStakeholderCommunication,
+      confirmMeeting,
       resetDemo,
     ],
   )
