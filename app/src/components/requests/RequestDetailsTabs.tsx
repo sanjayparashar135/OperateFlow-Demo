@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import type { DeliveryRequest } from '../../types/delivery'
 import type { PersonaId } from '../../types/persona'
 import {
@@ -41,6 +42,8 @@ interface RequestDetailsTabsProps {
   personaId: PersonaId
   onConfirmEstimation: (input: EstimationFormSubmit) => boolean
   onApproveBusinessEstimate: () => boolean
+  /** Persona-aware blocker resolution panel when REQ1235 is blocked. */
+  blockerPanel?: ReactNode
 }
 
 export function RequestDetailsTabs({
@@ -57,6 +60,7 @@ export function RequestDetailsTabs({
   personaId,
   onConfirmEstimation,
   onApproveBusinessEstimate,
+  blockerPanel,
 }: RequestDetailsTabsProps) {
   return (
     <div>
@@ -97,6 +101,7 @@ export function RequestDetailsTabs({
             request={request}
             linkedRecords={linkedRecords}
             attentionReasons={attentionReasons}
+            blockerPanel={blockerPanel}
           />
         ) : null}
         {tab === 'requirements' ? (
@@ -132,10 +137,12 @@ function SummaryPanel({
   request,
   linkedRecords,
   attentionReasons,
+  blockerPanel,
 }: {
   request: DeliveryRequest
   linkedRecords: LinkedRecord[]
   attentionReasons: string[]
+  blockerPanel?: ReactNode
 }) {
   const parties = getPartyDisplayRows(request)
 
@@ -157,6 +164,8 @@ function SummaryPanel({
         <StatusBadge status={request.workflowStatus} />
         <HealthBadge health={request.deliveryHealth} />
       </div>
+
+      {blockerPanel ? <div>{blockerPanel}</div> : null}
 
       <p className="m-0 text-sm leading-relaxed text-of-ink-secondary">
         {request.summary}

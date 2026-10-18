@@ -39,3 +39,29 @@ export function canAssignResources(personaId: PersonaId): boolean {
 export function canRespondToFollowUp(personaId: PersonaId): boolean {
   return personaId === 'ajay-raj'
 }
+
+/**
+ * Demo persona capability: only Ajay Raj may record AI-assisted
+ * troubleshooting progress on a blocked request. Not production RBAC.
+ */
+export function canRecordTroubleshooting(personaId: PersonaId): boolean {
+  return personaId === 'ajay-raj'
+}
+
+/**
+ * Demo persona capability: only Radhe Shyam may select delivery
+ * coordination actions for a blocked request. Not production RBAC.
+ */
+export function canSelectCoordinationActions(personaId: PersonaId): boolean {
+  return personaId === 'radhe-shyam'
+}
+
+/**
+ * Demo persona capability: only Radhe Shyam may confirm business-facing
+ * stakeholder communication. Not production RBAC.
+ */
+export function canConfirmStakeholderCommunication(
+  personaId: PersonaId,
+): boolean {
+  return personaId === 'radhe-shyam'
+}

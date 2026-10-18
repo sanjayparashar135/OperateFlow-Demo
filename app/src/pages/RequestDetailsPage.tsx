@@ -1,5 +1,6 @@
 import { useCallback, useMemo } from 'react'
 import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom'
+import { BlockerResolutionPanel } from '../components/blocker/BlockerResolutionPanel'
 import {
   RequestDetailsTabs,
   type EstimationFormSubmit,
@@ -19,7 +20,12 @@ import {
   getRequestById,
   isRequestVisibleToPersona,
 } from '../data/portfolioSelectors'
+import type {
+  CoordinationActionId,
+  DiagnosticDirectionId,
+} from '../types/simulation'
 import { MAIN_REQUEST_ID } from '../types/simulation'
+import type { PersonaId } from '../types/persona'
 
 function parseTab(value: string | null): RequestDetailsTabId {
   if (
@@ -40,6 +46,10 @@ export function RequestDetailsPage() {
     getRequestBundle,
     confirmEstimation,
     approveBusinessEstimate,
+    recordTroubleshootingProgress,
+    selectCoordinationActions,
+    confirmStakeholderCommunication,
+    collaborationChannelId,
     simulatedToday,
   } = useSimulation()
   const referenceDate = simulatedToday
@@ -52,6 +62,10 @@ export function RequestDetailsPage() {
 
   const bundle = getRequestBundle(requestId)
   const estimationAvailable = requestId === MAIN_REQUEST_ID && bundle !== null
+  const isBlockedMain =
+    requestId === MAIN_REQUEST_ID &&
+    bundle?.followUp?.responseKind === 'blocked' &&
+    request?.workflowStatus === 'Blocked'
 
   const handleConfirmEstimation = useCallback(
     (form: EstimationFormSubmit) => {
@@ -65,6 +79,54 @@ export function RequestDetailsPage() {
   const handleApproveBusiness = useCallback(() => {
     return approveBusinessEstimate(currentPersona.id)
   }, [approveBusinessEstimate, currentPersona.id])
+
+  const handleRecordTroubleshooting = useCallback(
+    (input: {
+      directionId: DiagnosticDirectionId
+      progressNote: string
+      needsIntegrationAssist: boolean
+    }) => {
+      return recordTroubleshootingProgress({
+        ...input,
+        recordedById: currentPersona.id,
+        referenceDate: simulatedToday,
+      })
+    },
+    [recordTroubleshootingProgress, currentPersona.id, simulatedToday],
+  )
+
+  const handleSaveCoordination = useCallback(
+    (actionIds: CoordinationActionId[]) => {
+      return selectCoordinationActions({
+        actionIds,
+        selectedById: currentPersona.id,
+        referenceDate: simulatedToday,
+      })
+    },
+    [selectCoordinationActions, currentPersona.id, simulatedToday],
+  )
+
+  const handleConfirmCommunication = useCallback(
+    (input: {
+      message: string
+      recipientId: PersonaId
+      nextUpdateNote: string | null
+      actionIds?: CoordinationActionId[]
+    }) => {
+      return confirmStakeholderCommunication({
+        ...input,
+        channelId: collaborationChannelId,
+        confirmedById: currentPersona.id,
+        referenceDate: simulatedToday,
+      })
+    },
+    [
+      confirmStakeholderCommunication,
+      collaborationChannelId,
+      currentPersona.id,
+      simulatedToday,
+    ],
+  )
 
   if (!request) {
     return (
@@ -95,6 +157,19 @@ export function RequestDetailsPage() {
   const linkedRecords = bundle?.linkedRecords ?? []
   const timelineEvents = bundle?.timelineEvents ?? []
   const estimation = bundle?.estimation ?? getDefaultEstimationDecision()
+
+  const blockerPanel =
+    isBlockedMain && bundle ? (
+      <BlockerResolutionPanel
+        request={request}
+        personaId={currentPersona.id}
+        blockerResolution={bundle.blockerResolution}
+        channelId={collaborationChannelId}
+        onRecordTroubleshooting={handleRecordTroubleshooting}
+        onSaveCoordination={handleSaveCoordination}
+        onConfirmCommunication={handleConfirmCommunication}
+      />
+    ) : null
 
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-5">
@@ -153,6 +228,7 @@ export function RequestDetailsPage() {
         personaId={currentPersona.id}
         onConfirmEstimation={handleConfirmEstimation}
         onApproveBusinessEstimate={handleApproveBusiness}
+        blockerPanel={blockerPanel}
       />
     </div>
   )

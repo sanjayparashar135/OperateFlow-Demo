@@ -16,6 +16,8 @@ interface ExecutionBoardProps {
   mainExecution: ExecutionState | undefined
   confirmedHours: number | null
   hasOpenFollowUp: boolean
+  /** True when REQ1235 follow-up response is I'm Blocked. */
+  isMainBlocked?: boolean
 }
 
 export function ExecutionBoard({
@@ -23,6 +25,7 @@ export function ExecutionBoard({
   mainExecution,
   confirmedHours,
   hasOpenFollowUp,
+  isMainBlocked = false,
 }: ExecutionBoardProps) {
   const mainRequest = requests.find((request) => request.id === MAIN_REQUEST_ID)
 
@@ -85,6 +88,14 @@ export function ExecutionBoard({
             {hasOpenFollowUp ? (
               <Link to="/follow-ups" className="text-of-ai hover:underline">
                 Open follow-up
+              </Link>
+            ) : null}
+            {isMainBlocked ? (
+              <Link
+                to={`/requests/${MAIN_REQUEST_ID}`}
+                className="text-of-ai hover:underline"
+              >
+                Open blocker resolution
               </Link>
             ) : null}
           </div>

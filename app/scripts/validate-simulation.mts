@@ -1,5 +1,5 @@
 /**
- * Build 3–5 regression checks:
+ * Build 3–6 regression checks:
  * - Seed portfolio unchanged (12 records, no REQ1235)
  * - Estimation accept / override / invalid override / idempotency
  * - John business approval → Approved — Awaiting Assignment
@@ -7,6 +7,7 @@
  * - Simulated date advance → one follow-up
  * - Developer responses including I'm Blocked
  * - Collaboration channel presentation defaults to Teams
+ * - Build 6 blocker troubleshooting, coordination, stakeholder communication
  */
 import {
   applyBusinessApproval,
@@ -18,6 +19,18 @@ import {
   hydrateApprovalRecord,
   hydrateAssignmentRecord,
 } from '../src/data/approvalHelpers.ts'
+import {
+  AI_STAKEHOLDER_UPDATE_DRAFT,
+} from '../src/data/blockerCoordinationDataset.ts'
+import {
+  applyCoordinationSelection,
+  applyStakeholderCommunication,
+  applyTroubleshootingProgress,
+  getConfirmedStakeholderMessage,
+  hydrateBlockerResolution,
+  STAKEHOLDER_TIMELINE_EVENT_ID,
+  TROUBLESHOOTING_TIMELINE_EVENT_ID,
+} from '../src/data/blockerResolutionHelpers.ts'
 import {
   DEFAULT_COLLABORATION_CHANNEL,
   getCollaborationChannel,
@@ -622,6 +635,254 @@ if (acceptResult.ok) {
               (e) => e.id === FOLLOW_UP_RESPONSE_TIMELINE_EVENT_ID,
             ).length === 1,
             'Exactly one response timeline event',
+          )
+
+          // --- Build 6: blocker resolution ---
+          const blockedBase = blocked.bundle
+          const legacyHydrated = hydrateBlockerResolution(undefined)
+          assert(
+            legacyHydrated.troubleshooting.decisionState === 'pending',
+            'Missing blockerResolution hydrates to pending troubleshooting',
+          )
+          assert(
+            getConfirmedStakeholderMessage(undefined) === null,
+            'John must not see unapproved communication draft',
+          )
+
+          assert(
+            applyTroubleshootingProgress(structuredClone(blockedBase), {
+              directionId: 'regional_timeout',
+              progressNote: 'Checking latency and timeout config.',
+              needsIntegrationAssist: true,
+              recordedById: 'radhe-shyam',
+              referenceDate: SIMULATED_ADVANCE_DATE,
+            }).ok === false,
+            'Radhe cannot record troubleshooting',
+          )
+          assert(
+            applyTroubleshootingProgress(structuredClone(blockedBase), {
+              directionId: 'regional_timeout',
+              progressNote: 'Checking latency and timeout config.',
+              needsIntegrationAssist: true,
+              recordedById: 'john-harrison',
+              referenceDate: SIMULATED_ADVANCE_DATE,
+            }).ok === false,
+            'John cannot record troubleshooting',
+          )
+
+          const troubleshoot = applyTroubleshootingProgress(
+            structuredClone(blockedBase),
+            {
+              directionId: 'regional_timeout',
+              progressNote: 'Checking latency and timeout config.',
+              needsIntegrationAssist: true,
+              recordedById: 'ajay-raj',
+              referenceDate: SIMULATED_ADVANCE_DATE,
+            },
+          )
+          assert(troubleshoot.ok === true, 'Ajay can record troubleshooting')
+          if (troubleshoot.ok) {
+            assert(
+              troubleshoot.bundle.followUp?.responseDetail ===
+                BLOCKED_TECHNICAL_DETAIL,
+              'Original blocker unchanged after troubleshooting',
+            )
+            assert(
+              troubleshoot.bundle.blockerResolution?.troubleshooting
+                .decisionState === 'recorded',
+              'Troubleshooting marked recorded',
+            )
+            assert(
+              troubleshoot.bundle.blockerResolution?.troubleshooting
+                .needsIntegrationAssist === true,
+              'Integration assist flag persists',
+            )
+            assert(
+              troubleshoot.bundle.timelineEvents.filter(
+                (e) => e.id === TROUBLESHOOTING_TIMELINE_EVENT_ID,
+              ).length === 1,
+              'Exactly one troubleshooting timeline event',
+            )
+            assert(
+              troubleshoot.bundle.mainRequest.workflowStatus === 'Blocked' &&
+                troubleshoot.bundle.mainRequest.deliveryHealth === 'At Risk' &&
+                troubleshoot.bundle.mainRequest.lifecycleStage === 'Execution',
+              'Status unchanged after troubleshooting',
+            )
+            assert(
+              applyTroubleshootingProgress(structuredClone(troubleshoot.bundle), {
+                directionId: 'callback_persistence',
+                progressNote: 'Retry note',
+                needsIntegrationAssist: false,
+                recordedById: 'ajay-raj',
+                referenceDate: SIMULATED_ADVANCE_DATE,
+              }).ok === false,
+              'Duplicate troubleshooting rejected',
+            )
+          }
+
+          assert(
+            applyCoordinationSelection(structuredClone(blockedBase), {
+              actionIds: ['coordinate_investigation'],
+              selectedById: 'ajay-raj',
+              referenceDate: SIMULATED_ADVANCE_DATE,
+            }).ok === false,
+            'Ajay cannot select coordination actions',
+          )
+
+          const coordinated = applyCoordinationSelection(
+            structuredClone(blockedBase),
+            {
+              actionIds: [
+                'coordinate_investigation',
+                'update_business_owner',
+              ],
+              selectedById: 'radhe-shyam',
+              referenceDate: SIMULATED_ADVANCE_DATE,
+            },
+          )
+          assert(coordinated.ok === true, 'Radhe can select coordination actions')
+          if (coordinated.ok) {
+            assert(
+              coordinated.bundle.blockerResolution?.coordination.selectedActionIds
+                .length === 2,
+              'Selected coordination actions persist',
+            )
+            assert(
+              getConfirmedStakeholderMessage(
+                coordinated.bundle.blockerResolution,
+              ) === null,
+              'Unapproved draft remains hidden from John',
+            )
+            assert(
+              coordinated.bundle.timelineEvents.every(
+                (e) => e.id !== STAKEHOLDER_TIMELINE_EVENT_ID,
+              ),
+              'Coordination selection does not create stakeholder timeline event',
+            )
+          }
+
+          assert(
+            applyStakeholderCommunication(structuredClone(blockedBase), {
+              message: AI_STAKEHOLDER_UPDATE_DRAFT,
+              recipientId: 'john-harrison',
+              nextUpdateNote: 'Further progress update after investigation',
+              channelId: 'teams',
+              confirmedById: 'ajay-raj',
+              referenceDate: SIMULATED_ADVANCE_DATE,
+              actionIds: ['coordinate_investigation'],
+            }).ok === false,
+            'Ajay cannot confirm stakeholder communication',
+          )
+          assert(
+            applyStakeholderCommunication(structuredClone(blockedBase), {
+              message: AI_STAKEHOLDER_UPDATE_DRAFT,
+              recipientId: 'john-harrison',
+              nextUpdateNote: null,
+              channelId: 'teams',
+              confirmedById: 'john-harrison',
+              referenceDate: SIMULATED_ADVANCE_DATE,
+              actionIds: ['coordinate_investigation'],
+            }).ok === false,
+            'John cannot confirm stakeholder communication',
+          )
+
+          const confirmedComms = applyStakeholderCommunication(
+            structuredClone(
+              troubleshoot.ok ? troubleshoot.bundle : blockedBase,
+            ),
+            {
+              message:
+                'During integration testing, the team identified an intermittent issue with the regional approval service.',
+              recipientId: 'john-harrison',
+              nextUpdateNote: 'Further progress update after investigation',
+              channelId: 'teams',
+              confirmedById: 'radhe-shyam',
+              referenceDate: SIMULATED_ADVANCE_DATE,
+              actionIds: [
+                'coordinate_investigation',
+                'assess_target_impact',
+                'update_business_owner',
+              ],
+            },
+          )
+          assert(
+            confirmedComms.ok === true,
+            'Radhe can confirm stakeholder communication without requiring prior troubleshooting dependency beyond blocked state',
+          )
+          if (confirmedComms.ok) {
+            assert(
+              confirmedComms.bundle.followUp?.responseDetail ===
+                BLOCKED_TECHNICAL_DETAIL,
+              'Original blocker unchanged after stakeholder confirm',
+            )
+            assert(
+              getConfirmedStakeholderMessage(
+                confirmedComms.bundle.blockerResolution,
+              )?.includes('intermittent issue') === true,
+              'Confirmed communication visible to John',
+            )
+            assert(
+              confirmedComms.bundle.blockerResolution?.coordination
+                .selectedActionIds.length === 3,
+              'Confirmed coordination actions persist',
+            )
+            assert(
+              confirmedComms.bundle.timelineEvents.filter(
+                (e) => e.id === STAKEHOLDER_TIMELINE_EVENT_ID,
+              ).length === 1,
+              'Exactly one stakeholder timeline event',
+            )
+            assert(
+              confirmedComms.bundle.mainRequest.lifecycleStage === 'Execution' &&
+                confirmedComms.bundle.mainRequest.workflowStatus === 'Blocked' &&
+                confirmedComms.bundle.mainRequest.deliveryHealth === 'At Risk',
+              'REQ1235 remains Execution / Blocked / At Risk after Build 6',
+            )
+            assert(
+              applyStakeholderCommunication(
+                structuredClone(confirmedComms.bundle),
+                {
+                  message: 'Duplicate attempt',
+                  recipientId: 'john-harrison',
+                  nextUpdateNote: null,
+                  channelId: 'teams',
+                  confirmedById: 'radhe-shyam',
+                  referenceDate: SIMULATED_ADVANCE_DATE,
+                  actionIds: ['coordinate_investigation'],
+                },
+              ).ok === false,
+              'Duplicate stakeholder confirmation rejected',
+            )
+
+            // Refresh / hydrate persistence of developer progress
+            const rehydrated = hydrateBlockerResolution(
+              confirmedComms.bundle.blockerResolution,
+            )
+            assert(
+              rehydrated.troubleshooting.decisionState === 'recorded' &&
+                rehydrated.troubleshooting.progressNote?.includes('latency') ===
+                  true,
+              'Developer progress survives hydrate/refresh',
+            )
+          }
+
+          // Confirm without troubleshooting first remains valid
+          const confirmWithoutTroubleshoot = applyStakeholderCommunication(
+            structuredClone(blockedBase),
+            {
+              message: AI_STAKEHOLDER_UPDATE_DRAFT,
+              recipientId: 'john-harrison',
+              nextUpdateNote: null,
+              channelId: 'slack',
+              confirmedById: 'radhe-shyam',
+              referenceDate: SIMULATED_ADVANCE_DATE,
+              actionIds: ['arrange_focused_discussion'],
+            },
+          )
+          assert(
+            confirmWithoutTroubleshoot.ok === true,
+            'Radhe confirm does not require Ajay troubleshooting first',
           )
         }
 

@@ -64,6 +64,7 @@ export function ExecutionPage() {
         mainExecution={mainBundle?.execution}
         confirmedHours={mainBundle?.estimation.confirmedHours ?? null}
         hasOpenFollowUp={mainBundle?.followUp?.status === 'open'}
+        isMainBlocked={mainBundle?.followUp?.responseKind === 'blocked'}
       />
     </div>
   )

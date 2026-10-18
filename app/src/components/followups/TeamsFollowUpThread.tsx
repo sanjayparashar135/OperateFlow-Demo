@@ -1,10 +1,12 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { Hash, MessageSquare } from 'lucide-react'
 import type {
   CollaborationChannelId,
   FollowUpRecord,
   FollowUpResponseKind,
 } from '../../types/simulation'
+import { MAIN_REQUEST_ID } from '../../types/simulation'
 import { canRespondToFollowUp } from '../../data/capabilities'
 import { getCollaborationChannel } from '../../data/collaborationChannel'
 import type { PersonaId } from '../../types/persona'
@@ -186,6 +188,19 @@ export function TeamsFollowUpThread({
           Awaiting Ajay Raj&apos;s response. You can review the thread; response
           actions are available to the assigned developer.
         </p>
+      ) : followUp.responseKind === 'blocked' ? (
+        <div className="mt-4 rounded-lg border border-of-ai-border bg-of-ai-soft/40 px-3 py-3">
+          <p className="m-0 text-sm text-of-ink-secondary">
+            Blocker recorded. Continue with AI-assisted troubleshooting,
+            delivery coordination, or business status on Request Details.
+          </p>
+          <Link
+            to={`/requests/${MAIN_REQUEST_ID}`}
+            className="mt-2 inline-flex text-sm font-semibold text-of-ai hover:underline"
+          >
+            Open blocker resolution
+          </Link>
+        </div>
       ) : null}
     </Panel>
   )

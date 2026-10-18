@@ -1,4 +1,9 @@
 import { createContext } from 'react'
+import type {
+  ConfirmStakeholderInput,
+  RecordTroubleshootingInput,
+  SelectCoordinationInput,
+} from '../data/blockerResolutionHelpers'
 import type { ConfirmEstimationInput } from '../data/estimationHelpers'
 import type { FollowUpResponseInput } from '../data/followUpHelpers'
 import type { ActivityEntry, DeliveryRequest } from '../types/delivery'
@@ -6,6 +11,7 @@ import type { PersonaId } from '../types/persona'
 import type {
   ApprovalRecord,
   AssignmentRecord,
+  BlockerResolutionRecord,
   CollaborationChannelId,
   EstimationDecision,
   ExecutionState,
@@ -26,6 +32,7 @@ export interface RequestBundle {
   assignment: AssignmentRecord | undefined
   execution: ExecutionState | undefined
   followUp: FollowUpRecord | undefined
+  blockerResolution: BlockerResolutionRecord
 }
 
 export interface SimulationContextValue {
@@ -64,6 +71,14 @@ export interface SimulationContextValue {
    * Ajay responds to the open follow-up. Returns false when invalid.
    */
   respondToFollowUp: (input: FollowUpResponseInput) => boolean
+  /** Ajay records AI-assisted troubleshooting progress on the blocker. */
+  recordTroubleshootingProgress: (
+    input: RecordTroubleshootingInput,
+  ) => boolean
+  /** Radhe selects planned coordination actions. */
+  selectCoordinationActions: (input: SelectCoordinationInput) => boolean
+  /** Radhe confirms business-facing stakeholder communication. */
+  confirmStakeholderCommunication: (input: ConfirmStakeholderInput) => boolean
   resetDemo: () => void
   /** Exposed for tests / validation helpers. */
   bundle: SubmittedSimulationBundle | null

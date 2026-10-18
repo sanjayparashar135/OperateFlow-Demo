@@ -38,6 +38,59 @@ export type TimelineEventCategory =
   | 'assignment'
   | 'estimation'
   | 'follow_up'
+  | 'communication'
+
+export type CollaborationChannelId = 'teams' | 'slack'
+
+export type DiagnosticDirectionId =
+  | 'regional_timeout'
+  | 'callback_persistence'
+  | 'integration_dependency'
+
+export type TroubleshootingDecisionState = 'pending' | 'recorded'
+
+export interface DeveloperTroubleshootingDecision {
+  decisionState: TroubleshootingDecisionState
+  selectedDirectionId: DiagnosticDirectionId | null
+  progressNote: string | null
+  needsIntegrationAssist: boolean
+  recordedById: PersonaId | null
+  recordedAt: string | null
+}
+
+export type CoordinationActionId =
+  | 'coordinate_investigation'
+  | 'assess_target_impact'
+  | 'update_business_owner'
+  | 'arrange_focused_discussion'
+
+export interface CoordinationDecision {
+  selectedActionIds: CoordinationActionId[]
+  selectedById: PersonaId | null
+  selectedAt: string | null
+}
+
+export type StakeholderCommunicationDecisionState =
+  | 'pending_review'
+  | 'confirmed'
+
+export interface StakeholderCommunicationDecision {
+  decisionState: StakeholderCommunicationDecisionState
+  /** Human-edited message; null until Radhe confirms. */
+  confirmedMessage: string | null
+  recipientId: PersonaId | null
+  confirmedById: PersonaId | null
+  confirmedAt: string | null
+  nextUpdateNote: string | null
+  channelId: CollaborationChannelId | null
+}
+
+/** Human decisions for AI-assisted blocker resolution on REQ1235. */
+export interface BlockerResolutionRecord {
+  troubleshooting: DeveloperTroubleshootingDecision
+  coordination: CoordinationDecision
+  stakeholderCommunication: StakeholderCommunicationDecision
+}
 
 export interface TimelineEvent {
   id: string
@@ -66,8 +119,6 @@ export interface ExecutionState {
   reportedProgressPercent: number
   lastDeveloperUpdateDate: string
 }
-
-export type CollaborationChannelId = 'teams' | 'slack'
 
 export type FollowUpResponseKind =
   | 'on_track'
@@ -143,6 +194,8 @@ export interface SubmittedSimulationBundle {
   execution?: ExecutionState
   /** Optional; created by deadline trigger. */
   followUp?: FollowUpRecord
+  /** Optional; Build 6 blocker resolution human decisions. */
+  blockerResolution?: BlockerResolutionRecord
 }
 
 export const MAIN_REQUEST_ID = 'REQ1235'

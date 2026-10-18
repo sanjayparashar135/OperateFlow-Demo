@@ -21,6 +21,15 @@ import {
   type ConfirmEstimationInput,
 } from '../data/estimationHelpers'
 import {
+  applyCoordinationSelection,
+  applyStakeholderCommunication,
+  applyTroubleshootingProgress,
+  hydrateBlockerResolution,
+  type ConfirmStakeholderInput,
+  type RecordTroubleshootingInput,
+  type SelectCoordinationInput,
+} from '../data/blockerResolutionHelpers'
+import {
   applyFollowUpResponse,
   applyFollowUpTrigger,
   hydrateFollowUp,
@@ -79,6 +88,7 @@ function hydrateBundle(
     estimation: hydrateEstimationDecision(bundle.estimation),
     assignment: hydrateAssignmentRecord(withApproval),
     followUp: hydrateFollowUp(bundle.followUp),
+    blockerResolution: hydrateBlockerResolution(bundle.blockerResolution),
   }
 }
 
@@ -190,6 +200,7 @@ export function SimulationProvider({ children }: { children: ReactNode }) {
         assignment: hydrated.assignment,
         execution: hydrated.execution,
         followUp: hydrated.followUp,
+        blockerResolution: hydrateBlockerResolution(hydrated.blockerResolution),
       }
     },
     [bundle],
@@ -281,6 +292,39 @@ export function SimulationProvider({ children }: { children: ReactNode }) {
     [bundle],
   )
 
+  const recordTroubleshootingProgress = useCallback(
+    (input: RecordTroubleshootingInput) => {
+      if (bundle === null) return false
+      const result = applyTroubleshootingProgress(bundle, input)
+      if (!result.ok) return false
+      setBundle(result.bundle)
+      return true
+    },
+    [bundle],
+  )
+
+  const selectCoordinationActions = useCallback(
+    (input: SelectCoordinationInput) => {
+      if (bundle === null) return false
+      const result = applyCoordinationSelection(bundle, input)
+      if (!result.ok) return false
+      setBundle(result.bundle)
+      return true
+    },
+    [bundle],
+  )
+
+  const confirmStakeholderCommunication = useCallback(
+    (input: ConfirmStakeholderInput) => {
+      if (bundle === null) return false
+      const result = applyStakeholderCommunication(bundle, input)
+      if (!result.ok) return false
+      setBundle(result.bundle)
+      return true
+    },
+    [bundle],
+  )
+
   const resetDemo = useCallback(() => {
     clearStored()
     setBundle(null)
@@ -303,6 +347,9 @@ export function SimulationProvider({ children }: { children: ReactNode }) {
       assignResources,
       advanceSimulatedDate,
       respondToFollowUp,
+      recordTroubleshootingProgress,
+      selectCoordinationActions,
+      confirmStakeholderCommunication,
       resetDemo,
       bundle,
     }),
@@ -320,6 +367,9 @@ export function SimulationProvider({ children }: { children: ReactNode }) {
       assignResources,
       advanceSimulatedDate,
       respondToFollowUp,
+      recordTroubleshootingProgress,
+      selectCoordinationActions,
+      confirmStakeholderCommunication,
       resetDemo,
     ],
   )
