@@ -12,6 +12,7 @@ export type WorkflowStatus =
   | 'Awaiting Review'
   | 'Awaiting Technical Review'
   | 'Pending Approval'
+  | 'Approved — Awaiting Assignment'
   | 'In Progress'
   | 'Blocked'
   | 'In UAT'
@@ -98,6 +99,7 @@ export const PENDING_REVIEW_STATUSES: WorkflowStatus[] = [
   'Awaiting Review',
   'Awaiting Technical Review',
   'Pending Approval',
+  'Approved — Awaiting Assignment',
 ]
 
 export const DEADLINE_ATTENTION_DAYS = 3

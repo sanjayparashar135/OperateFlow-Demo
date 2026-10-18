@@ -1,11 +1,27 @@
 /**
- * Build 3 + Build 4 regression checks:
+ * Build 3–5 regression checks:
  * - Seed portfolio unchanged (12 records, no REQ1235)
- * - Post-submit visibility / KPI expectations for the merged portfolio
- * - Atomic factory produces stable IDs (no duplicate timeline/activity ids)
  * - Estimation accept / override / invalid override / idempotency
- * - Confirmed status Pending Approval without Execution or developer assignment
+ * - John business approval → Approved — Awaiting Assignment
+ * - Radhe resource assignment → Execution + Ajay
+ * - Simulated date advance → one follow-up
+ * - Developer responses including I'm Blocked
+ * - Collaboration channel presentation defaults to Teams
  */
+import {
+  applyBusinessApproval,
+  applyResourceAssignment,
+  APPROVAL_TIMELINE_EVENT_ID,
+  ASSIGNMENT_TIMELINE_EVENT_ID,
+  canApplyBusinessApproval,
+  canApplyResourceAssignment,
+  hydrateApprovalRecord,
+  hydrateAssignmentRecord,
+} from '../src/data/approvalHelpers.ts'
+import {
+  DEFAULT_COLLABORATION_CHANNEL,
+  getCollaborationChannel,
+} from '../src/data/collaborationChannel.ts'
 import {
   buildDefaultStructuredRequirements,
   createSubmittedMainRequestBundle,
@@ -21,6 +37,17 @@ import {
   ESTIMATION_CONFIRMED_ATTENTION,
 } from '../src/data/estimationDataset.ts'
 import {
+  applyFollowUpResponse,
+  applyFollowUpTrigger,
+  isFollowUpTriggerEligible,
+} from '../src/data/followUpHelpers.ts'
+import {
+  BLOCKED_TECHNICAL_DETAIL,
+  FOLLOW_UP_ID,
+  FOLLOW_UP_TIMELINE_EVENT_ID,
+  FOLLOW_UP_RESPONSE_TIMELINE_EVENT_ID,
+} from '../src/data/followUpDataset.ts'
+import {
   DELIVERY_INSIGHTS,
   PORTFOLIO_REQUESTS,
   RECENT_ACTIVITY,
@@ -32,7 +59,10 @@ import {
   validatePortfolioConsistency,
 } from '../src/data/portfolioSelectors.ts'
 import { PERSONAS } from '../src/data/personas.ts'
-import { SIMULATED_TODAY } from '../src/data/simDate.ts'
+import {
+  SIMULATED_ADVANCE_DATE,
+  SIMULATED_TODAY,
+} from '../src/data/simDate.ts'
 import {
   MAIN_JIRA_ID,
   MAIN_REQUEST_ID,
@@ -360,6 +390,354 @@ const legacyConfirm = applyEstimationConfirmation(
 )
 assert(legacyConfirm.ok === true, 'Build 3 sessions without estimation must confirm')
 
+// --- Build 5 refinements: split business approval and resource assignment ---
+assert(
+  canApplyBusinessApproval(bundle) !== null,
+  'Business approval must be blocked before estimation is confirmed',
+)
+assert(
+  applyBusinessApproval(bundle, 'john-harrison', SIMULATED_TODAY).ok === false,
+  'John cannot approve without confirmed estimate',
+)
+assert(
+  DEFAULT_COLLABORATION_CHANNEL === 'teams',
+  'Default collaboration channel must be Microsoft Teams',
+)
+assert(
+  getCollaborationChannel('teams').label === 'Microsoft Teams',
+  'Teams label must be Microsoft Teams',
+)
+assert(
+  getCollaborationChannel('slack').label === 'Slack',
+  'Slack label must be Slack',
+)
+
+assert(acceptResult.ok === true, 'Build 5 requires successful Build 4 accept fixture')
+if (acceptResult.ok) {
+  const pendingApproval = acceptResult.bundle
+
+  assert(
+    canApplyResourceAssignment(pendingApproval) !== null,
+    'Radhe cannot assign before business approval',
+  )
+  assert(
+    applyResourceAssignment(pendingApproval, 'radhe-shyam', SIMULATED_TODAY).ok ===
+      false,
+    'Assignment without business approval must fail',
+  )
+  assert(
+    canApplyBusinessApproval(pendingApproval) === null,
+    'John may approve after technical estimate',
+  )
+  assert(
+    applyBusinessApproval(pendingApproval, 'radhe-shyam', SIMULATED_TODAY).ok ===
+      false,
+    'Only John may approve the business estimate',
+  )
+
+  const businessResult = applyBusinessApproval(
+    pendingApproval,
+    'john-harrison',
+    SIMULATED_TODAY,
+  )
+  assert(businessResult.ok === true, 'John business approval must succeed')
+  if (businessResult.ok) {
+    const businessApproved = businessResult.bundle
+    assert(
+      businessApproved.mainRequest.lifecycleStage === 'Approval & Planning',
+      'Business approval must remain Approval & Planning',
+    )
+    assert(
+      businessApproved.mainRequest.workflowStatus ===
+        'Approved — Awaiting Assignment',
+      'Business approval status must be Approved — Awaiting Assignment',
+    )
+    assert(
+      businessApproved.mainRequest.parties.developerId === undefined,
+      'Developer must remain unassigned after business approval',
+    )
+    assert(
+      businessApproved.mainRequest.primaryOwnerId === 'sanjay-parashar',
+      'Primary owner stays Sanjay until resource assignment',
+    )
+    assert(
+      businessApproved.timelineEvents.filter(
+        (e) => e.id === APPROVAL_TIMELINE_EVENT_ID,
+      ).length === 1,
+      'Exactly one business approval timeline event',
+    )
+    assert(
+      businessApproved.timelineEvents.filter(
+        (e) => e.id === ASSIGNMENT_TIMELINE_EVENT_ID,
+      ).length === 0,
+      'No assignment event during business approval',
+    )
+    assert(
+      applyBusinessApproval(
+        businessApproved,
+        'john-harrison',
+        SIMULATED_TODAY,
+      ).ok === false,
+      'Repeated business approval must be rejected',
+    )
+    assert(
+      !getVisibleRequests('ajay-raj', [
+        ...PORTFOLIO_REQUESTS,
+        businessApproved.mainRequest,
+      ]).some((r) => r.id === MAIN_REQUEST_ID),
+      'Ajay must not see REQ1235 before assignment',
+    )
+
+    assert(
+      canApplyResourceAssignment(businessApproved) === null,
+      'Radhe may assign after business approval',
+    )
+    const assignResult = applyResourceAssignment(
+      businessApproved,
+      'radhe-shyam',
+      SIMULATED_TODAY,
+    )
+    assert(assignResult.ok === true, 'Resource assignment must succeed')
+    if (assignResult.ok) {
+      const assigned = assignResult.bundle
+      assert(
+        assigned.mainRequest.lifecycleStage === 'Execution',
+        'Assignment moves lifecycle to Execution',
+      )
+      assert(
+        assigned.mainRequest.workflowStatus === 'In Progress',
+        'Assignment workflow must be In Progress',
+      )
+      assert(
+        assigned.mainRequest.primaryOwnerId === 'radhe-shyam',
+        'Primary owner transfers to Radhe on assignment',
+      )
+      assert(
+        assigned.mainRequest.parties.developerId === 'ajay-raj',
+        'Ajay must be assigned',
+      )
+      assert(
+        assigned.mainRequest.parties.technicalLeadId === 'sanjay-parashar',
+        'Sanjay remains technical lead',
+      )
+      assert(
+        assigned.mainRequest.parties.requesterId === 'john-harrison',
+        'John remains requester',
+      )
+      assert(
+        assigned.timelineEvents.filter((e) => e.id === APPROVAL_TIMELINE_EVENT_ID)
+          .length === 1,
+        'Business approval event remains exactly once',
+      )
+      assert(
+        assigned.timelineEvents.filter(
+          (e) => e.id === ASSIGNMENT_TIMELINE_EVENT_ID,
+        ).length === 1,
+        'Exactly one assignment timeline event',
+      )
+      assert(
+        applyResourceAssignment(assigned, 'radhe-shyam', SIMULATED_TODAY).ok ===
+          false,
+        'Repeated assignment must be rejected',
+      )
+
+      const afterAssignMerged = [...PORTFOLIO_REQUESTS, assigned.mainRequest]
+      assert(
+        getVisibleRequests('ajay-raj', afterAssignMerged).length === 4,
+        'Ajay visible count must be 4 after assignment',
+      )
+      const radheExecKpis = getPortfolioKpis(
+        getVisibleRequests('radhe-shyam', afterAssignMerged),
+        SIMULATED_TODAY,
+      )
+      assert(
+        radheExecKpis.inExecution === 4,
+        `Radhe inExecution expected 4 after assignment, got ${radheExecKpis.inExecution}`,
+      )
+
+      assert(
+        isFollowUpTriggerEligible(assigned, SIMULATED_TODAY) === false,
+        'Follow-up must not trigger on baseline date',
+      )
+      const triggerTeams = applyFollowUpTrigger(
+        assigned,
+        SIMULATED_ADVANCE_DATE,
+        'teams',
+      )
+      assert(
+        triggerTeams.ok === true && triggerTeams.created === true,
+        'Oct 21 must create follow-up',
+      )
+      if (triggerTeams.ok) {
+        const withFollowUp = triggerTeams.bundle
+        assert(withFollowUp.followUp?.id === FOLLOW_UP_ID, 'Follow-up id stable')
+        assert(
+          withFollowUp.followUp?.channelId === 'teams',
+          'Follow-up channel defaults to teams',
+        )
+        assert(
+          withFollowUp.timelineEvents.filter(
+            (e) => e.id === FOLLOW_UP_TIMELINE_EVENT_ID,
+          ).length === 1,
+          'Exactly one follow-up timeline event',
+        )
+        const triggerAgain = applyFollowUpTrigger(
+          withFollowUp,
+          SIMULATED_ADVANCE_DATE,
+          'slack',
+        )
+        assert(
+          triggerAgain.ok === true && triggerAgain.created === false,
+          'Second trigger idempotent; Slack config does not create another follow-up',
+        )
+        assert(
+          withFollowUp.followUp?.channelId === 'teams',
+          'Slack presentation config must not alter existing follow-up channel',
+        )
+
+        const blocked = applyFollowUpResponse(structuredClone(withFollowUp), {
+          kind: 'blocked',
+          referenceDate: SIMULATED_ADVANCE_DATE,
+        })
+        assert(blocked.ok === true, "I'm Blocked must succeed")
+        if (blocked.ok) {
+          assert(
+            blocked.bundle.mainRequest.lifecycleStage === 'Execution',
+            'Blocked remains Execution',
+          )
+          assert(
+            blocked.bundle.mainRequest.workflowStatus === 'Blocked',
+            'Blocked workflow',
+          )
+          assert(
+            blocked.bundle.mainRequest.deliveryHealth === 'At Risk',
+            'Blocked At Risk',
+          )
+          assert(
+            blocked.bundle.followUp?.responseDetail === BLOCKED_TECHNICAL_DETAIL,
+            'Blocked detail matches script',
+          )
+          assert(
+            blocked.bundle.timelineEvents.filter(
+              (e) => e.id === FOLLOW_UP_RESPONSE_TIMELINE_EVENT_ID,
+            ).length === 1,
+            'Exactly one response timeline event',
+          )
+        }
+
+        assert(
+          applyFollowUpResponse(structuredClone(withFollowUp), {
+            kind: 'on_track',
+            referenceDate: SIMULATED_ADVANCE_DATE,
+          }).ok === true,
+          'On Track response must succeed',
+        )
+        assert(
+          applyFollowUpResponse(structuredClone(withFollowUp), {
+            kind: 'other',
+            detail: '   ',
+            referenceDate: SIMULATED_ADVANCE_DATE,
+          }).ok === false,
+          'Empty Other Update must fail',
+        )
+      }
+
+      // Slack channel at trigger time is presentation-only metadata
+      const assignedFresh = assignResult.bundle
+      const slackOnly = applyFollowUpTrigger(
+        assignedFresh,
+        SIMULATED_ADVANCE_DATE,
+        'slack',
+      )
+      assert(
+        slackOnly.ok === true &&
+          slackOnly.created === true &&
+          slackOnly.bundle.followUp?.channelId === 'slack',
+        'Slack can be recorded as presentation channel without changing business rules',
+      )
+      assert(
+        slackOnly.ok &&
+          slackOnly.bundle.mainRequest.lifecycleStage === 'Execution' &&
+          slackOnly.bundle.mainRequest.parties.developerId === 'ajay-raj',
+        'Slack channel does not alter execution assignment state',
+      )
+    }
+  }
+}
+
+// Legacy Build 4 session (estimate confirmed, no approval) can still business-approve
+const legacyPlanning = acceptResult.ok
+  ? {
+      ...acceptResult.bundle,
+      approval: undefined,
+      assignment: undefined,
+      execution: undefined,
+      followUp: undefined,
+    }
+  : null
+if (legacyPlanning) {
+  const legacyApprove = applyBusinessApproval(
+    legacyPlanning,
+    'john-harrison',
+    SIMULATED_TODAY,
+  )
+  assert(legacyApprove.ok === true, 'Build 4 sessions must hydrate into John approval path')
+}
+
+// Legacy combined Build 5 Execution session without separate assignment record
+if (acceptResult.ok) {
+  const legacyCombined = {
+    ...acceptResult.bundle,
+    approval: {
+      approvedById: 'radhe-shyam' as const,
+      approvedAt: `${SIMULATED_TODAY}T11:00:00`,
+      assignedDeveloperId: 'ajay-raj' as const,
+    },
+    assignment: undefined,
+    execution: {
+      reportedProgressPercent: 60,
+      lastDeveloperUpdateDate: '2026-10-19',
+    },
+    mainRequest: {
+      ...acceptResult.bundle.mainRequest,
+      lifecycleStage: 'Execution' as const,
+      workflowStatus: 'In Progress' as const,
+      primaryOwnerId: 'radhe-shyam' as const,
+      parties: {
+        ...acceptResult.bundle.mainRequest.parties,
+        developerId: 'ajay-raj' as const,
+      },
+    },
+    timelineEvents: acceptResult.bundle.timelineEvents.filter(
+      (e) =>
+        e.id !== APPROVAL_TIMELINE_EVENT_ID &&
+        e.id !== ASSIGNMENT_TIMELINE_EVENT_ID,
+    ),
+  }
+  const hydratedApproval = hydrateApprovalRecord(legacyCombined.approval)
+  const hydratedAssignment = hydrateAssignmentRecord(legacyCombined)
+  assert(
+    hydratedApproval?.approvedById === 'radhe-shyam',
+    'Legacy approval actor preserved without inventing new events',
+  )
+  assert(
+    hydratedAssignment?.assignedDeveloperId === 'ajay-raj',
+    'Legacy Execution session hydrates assignment in memory',
+  )
+  assert(
+    legacyCombined.timelineEvents.every(
+      (e) =>
+        e.id !== APPROVAL_TIMELINE_EVENT_ID &&
+        e.id !== ASSIGNMENT_TIMELINE_EVENT_ID,
+    ),
+    'Hydration must not fabricate historical approval/assignment timeline events',
+  )
+  assert(
+    isFollowUpTriggerEligible(legacyCombined, SIMULATED_ADVANCE_DATE) === true,
+    'Legacy Execution sessions remain eligible for follow-up trigger',
+  )
+}
+
 // Reset semantics: dropping the submitted request restores seed counts
 const afterReset = PORTFOLIO_REQUESTS
 for (const persona of PERSONAS) {
@@ -369,6 +747,7 @@ for (const persona of PERSONAS) {
     `After reset visible for ${persona.id} should match seed`,
   )
 }
+assert(SIMULATED_TODAY === '2026-10-17', 'Baseline simulated date constant must remain Oct 17')
 
 const report = {
   ok: issues.length === 0,
@@ -383,6 +762,7 @@ const report = {
   ),
   radheKpis,
   suggestionHours: ESTIMATION_SUGGESTION.suggestedHours,
+  advanceDate: SIMULATED_ADVANCE_DATE,
 }
 
 console.log(JSON.stringify(report, null, 2))

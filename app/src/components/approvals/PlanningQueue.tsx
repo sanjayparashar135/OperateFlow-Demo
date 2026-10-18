@@ -2,7 +2,11 @@ import { Link } from 'react-router-dom'
 import { ArrowRight } from 'lucide-react'
 import type { DeliveryRequest } from '../../types/delivery'
 import type { PersonaId } from '../../types/persona'
-import { canConfirmEstimation } from '../../data/capabilities'
+import {
+  canApproveBusinessEstimate,
+  canAssignResources,
+  canConfirmEstimation,
+} from '../../data/capabilities'
 import { formatDisplayDate } from '../../lib/format'
 import { primaryOwnerName } from '../../lib/requestParties'
 import { MAIN_REQUEST_ID } from '../../types/simulation'
@@ -16,6 +20,10 @@ import { Panel, PanelHeader } from '../ui/Panel'
 interface PlanningQueueProps {
   requests: DeliveryRequest[]
   personaId: PersonaId
+  canApproveEstimate: boolean
+  canAssignDeveloper: boolean
+  onStartApproval: () => void
+  onStartAssignment: () => void
 }
 
 function isActionableTechnicalReview(
@@ -29,7 +37,40 @@ function isActionableTechnicalReview(
   )
 }
 
-export function PlanningQueue({ requests, personaId }: PlanningQueueProps) {
+function isActionableBusinessApproval(
+  request: DeliveryRequest,
+  personaId: PersonaId,
+  canApproveEstimate: boolean,
+): boolean {
+  return (
+    canApproveEstimate &&
+    request.id === MAIN_REQUEST_ID &&
+    request.workflowStatus === 'Pending Approval' &&
+    canApproveBusinessEstimate(personaId)
+  )
+}
+
+function isActionableAssignment(
+  request: DeliveryRequest,
+  personaId: PersonaId,
+  canAssignDeveloper: boolean,
+): boolean {
+  return (
+    canAssignDeveloper &&
+    request.id === MAIN_REQUEST_ID &&
+    request.workflowStatus === 'Approved — Awaiting Assignment' &&
+    canAssignResources(personaId)
+  )
+}
+
+export function PlanningQueue({
+  requests,
+  personaId,
+  canApproveEstimate,
+  canAssignDeveloper,
+  onStartApproval,
+  onStartAssignment,
+}: PlanningQueueProps) {
   if (requests.length === 0) {
     return (
       <Panel padding="lg">
@@ -49,7 +90,7 @@ export function PlanningQueue({ requests, personaId }: PlanningQueueProps) {
     <Panel padding="lg">
       <PanelHeader
         title="Planning queue"
-        description="Visible requests in Approval & Planning. Open a row for details; technical estimation is reviewed in Request Details."
+        description="Visible requests in Approval & Planning. Technical estimation, business approval, and resource assignment are separate human actions."
       />
 
       <div className="mt-4 overflow-x-auto">
@@ -66,15 +107,26 @@ export function PlanningQueue({ requests, personaId }: PlanningQueueProps) {
           </thead>
           <tbody>
             {requests.map((request) => {
-              const actionable = isActionableTechnicalReview(request, personaId)
+              const techReview = isActionableTechnicalReview(request, personaId)
+              const businessApproval = isActionableBusinessApproval(
+                request,
+                personaId,
+                canApproveEstimate,
+              )
+              const assignment = isActionableAssignment(
+                request,
+                personaId,
+                canAssignDeveloper,
+              )
               const estimationHref = `/requests/${request.id}?tab=estimation`
               const detailsHref = `/requests/${request.id}`
+              const highlight = techReview || businessApproval || assignment
 
               return (
                 <tr
                   key={request.id}
                   className={`border-b border-of-border/80 ${
-                    actionable ? 'bg-of-ai-soft/30' : 'bg-of-surface'
+                    highlight ? 'bg-of-ai-soft/30' : 'bg-of-surface'
                   }`}
                 >
                   <td className="px-2 py-3 align-top">
@@ -105,7 +157,25 @@ export function PlanningQueue({ requests, personaId }: PlanningQueueProps) {
                     {formatDisplayDate(request.targetDate)}
                   </td>
                   <td className="px-2 py-3 align-top">
-                    {actionable ? (
+                    {businessApproval ? (
+                      <button
+                        type="button"
+                        onClick={onStartApproval}
+                        className="inline-flex items-center gap-1 rounded-lg bg-of-primary px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-of-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-of-primary"
+                      >
+                        Approve estimate
+                        <ArrowRight className="h-3.5 w-3.5" aria-hidden />
+                      </button>
+                    ) : assignment ? (
+                      <button
+                        type="button"
+                        onClick={onStartAssignment}
+                        className="inline-flex items-center gap-1 rounded-lg bg-of-primary px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-of-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-of-primary"
+                      >
+                        Assign resources
+                        <ArrowRight className="h-3.5 w-3.5" aria-hidden />
+                      </button>
+                    ) : techReview ? (
                       <Link
                         to={estimationHref}
                         className="inline-flex items-center gap-1 rounded-lg border border-of-ai-border bg-of-ai-soft px-3 py-1.5 text-xs font-semibold text-of-ai transition-colors hover:bg-of-ai-soft/80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-of-ai"

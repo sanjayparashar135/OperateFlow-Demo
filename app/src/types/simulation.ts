@@ -37,6 +37,7 @@ export type TimelineEventCategory =
   | 'review'
   | 'assignment'
   | 'estimation'
+  | 'follow_up'
 
 export interface TimelineEvent {
   id: string
@@ -46,6 +47,46 @@ export interface TimelineEvent {
   detail: string
   source: EvidenceSource
   category: TimelineEventCategory
+}
+
+/** Business estimate approval by the requester (John). */
+export interface ApprovalRecord {
+  approvedById: PersonaId
+  approvedAt: string
+}
+
+/** Resource assignment by the project manager (Radhe). */
+export interface AssignmentRecord {
+  assignedById: PersonaId
+  assignedAt: string
+  assignedDeveloperId: PersonaId
+}
+
+export interface ExecutionState {
+  reportedProgressPercent: number
+  lastDeveloperUpdateDate: string
+}
+
+export type CollaborationChannelId = 'teams' | 'slack'
+
+export type FollowUpResponseKind =
+  | 'on_track'
+  | 'blocked'
+  | 'completed'
+  | 'other'
+
+export type FollowUpStatus = 'open' | 'responded'
+
+export interface FollowUpRecord {
+  id: string
+  status: FollowUpStatus
+  triggeredAt: string
+  message: string
+  /** Channel used when the follow-up was opened (presentation metadata). */
+  channelId: CollaborationChannelId
+  responseKind: FollowUpResponseKind | null
+  responseDetail: string | null
+  respondedAt: string | null
 }
 
 export interface HistoricalComparable {
@@ -94,6 +135,14 @@ export interface SubmittedSimulationBundle {
   activityEntries: ActivityEntry[]
   /** Optional for Build 3 session hydration; defaults to pending review. */
   estimation?: EstimationDecision
+  /** Optional; set when John approves the business estimate. */
+  approval?: ApprovalRecord
+  /** Optional; set when Radhe assigns the developer. */
+  assignment?: AssignmentRecord
+  /** Optional; set on resource assignment into Execution. */
+  execution?: ExecutionState
+  /** Optional; created by deadline trigger. */
+  followUp?: FollowUpRecord
 }
 
 export const MAIN_REQUEST_ID = 'REQ1235'
@@ -104,4 +153,6 @@ export const SIMULATION_STORAGE_VERSION = 1 as const
 export interface PersistedSimulationV1 {
   version: typeof SIMULATION_STORAGE_VERSION
   bundle: SubmittedSimulationBundle
+  /** Optional for Build 3/4 hydration; defaults to baseline Oct 17. */
+  simulatedToday?: string
 }

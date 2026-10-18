@@ -19,7 +19,6 @@ import {
   getRequestById,
   isRequestVisibleToPersona,
 } from '../data/portfolioSelectors'
-import { getSimulatedToday } from '../data/simDate'
 import { MAIN_REQUEST_ID } from '../types/simulation'
 
 function parseTab(value: string | null): RequestDetailsTabId {
@@ -36,8 +35,14 @@ export function RequestDetailsPage() {
   const { requestId = '' } = useParams()
   const [searchParams, setSearchParams] = useSearchParams()
   const { currentPersona } = useRole()
-  const { requests, getRequestBundle, confirmEstimation } = useSimulation()
-  const referenceDate = getSimulatedToday()
+  const {
+    requests,
+    getRequestBundle,
+    confirmEstimation,
+    approveBusinessEstimate,
+    simulatedToday,
+  } = useSimulation()
+  const referenceDate = simulatedToday
   const tab = parseTab(searchParams.get('tab'))
 
   const request = useMemo(
@@ -51,11 +56,15 @@ export function RequestDetailsPage() {
   const handleConfirmEstimation = useCallback(
     (form: EstimationFormSubmit) => {
       return confirmEstimation(
-        buildConfirmEstimationInput(form, currentPersona.id),
+        buildConfirmEstimationInput(form, currentPersona.id, simulatedToday),
       )
     },
-    [confirmEstimation, currentPersona.id],
+    [confirmEstimation, currentPersona.id, simulatedToday],
   )
+
+  const handleApproveBusiness = useCallback(() => {
+    return approveBusinessEstimate(currentPersona.id)
+  }, [approveBusinessEstimate, currentPersona.id])
 
   if (!request) {
     return (
@@ -140,8 +149,10 @@ export function RequestDetailsPage() {
         attentionReasons={reasons}
         estimation={estimationAvailable ? estimation : null}
         estimationAvailable={estimationAvailable}
+        businessApproved={Boolean(bundle?.approval)}
         personaId={currentPersona.id}
         onConfirmEstimation={handleConfirmEstimation}
+        onApproveBusinessEstimate={handleApproveBusiness}
       />
     </div>
   )

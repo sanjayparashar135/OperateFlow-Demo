@@ -16,13 +16,16 @@ import {
   getScopedInsights,
   getVisibleRequests,
 } from '../data/portfolioSelectors'
-import { getSimulatedToday } from '../data/simDate'
 import { useRequestSummary } from '../hooks/useRequestSummary'
 
 export function OverviewPage() {
   const { currentPersona } = useRole()
-  const { requests, activity: portfolioActivity } = useSimulation()
-  const referenceDate = getSimulatedToday()
+  const {
+    requests,
+    activity: portfolioActivity,
+    simulatedToday,
+  } = useSimulation()
+  const referenceDate = simulatedToday
 
   const visible = useMemo(
     () => getVisibleRequests(currentPersona.id, requests),
@@ -56,7 +59,11 @@ export function OverviewPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-5">
-      <OverviewHeader kpis={kpis} visibleCount={visible.length} />
+      <OverviewHeader
+        kpis={kpis}
+        visibleCount={visible.length}
+        simulatedToday={simulatedToday}
+      />
       <KpiGrid kpis={kpis} />
 
       <div className="grid grid-cols-1 gap-5 xl:grid-cols-5">

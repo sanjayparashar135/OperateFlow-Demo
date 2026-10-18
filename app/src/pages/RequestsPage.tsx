@@ -13,14 +13,18 @@ import {
   getVisibleRequests,
   parseRequestsViewPreset,
 } from '../data/portfolioSelectors'
-import { getSimulatedToday } from '../data/simDate'
 import { useRequestSummary } from '../hooks/useRequestSummary'
 
 export function RequestsPage() {
   const { currentPersona } = useRole()
-  const { requests, hasMainRequest, mainRequestId } = useSimulation()
+  const {
+    requests,
+    hasMainRequest,
+    mainRequestId,
+    simulatedToday,
+  } = useSimulation()
   const [searchParams, setSearchParams] = useSearchParams()
-  const referenceDate = getSimulatedToday()
+  const referenceDate = simulatedToday
   const viewCopy = getPersonaViewCopy(currentPersona.id)
   const summary = useRequestSummary(currentPersona.id, requests, referenceDate)
   const previousPersonaId = useRef(currentPersona.id)

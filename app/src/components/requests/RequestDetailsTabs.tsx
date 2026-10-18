@@ -37,8 +37,10 @@ interface RequestDetailsTabsProps {
   attentionReasons: string[]
   estimation: EstimationDecision | null
   estimationAvailable: boolean
+  businessApproved: boolean
   personaId: PersonaId
   onConfirmEstimation: (input: EstimationFormSubmit) => boolean
+  onApproveBusinessEstimate: () => boolean
 }
 
 export function RequestDetailsTabs({
@@ -51,8 +53,10 @@ export function RequestDetailsTabs({
   attentionReasons,
   estimation,
   estimationAvailable,
+  businessApproved,
   personaId,
   onConfirmEstimation,
+  onApproveBusinessEstimate,
 }: RequestDetailsTabsProps) {
   return (
     <div>
@@ -109,8 +113,11 @@ export function RequestDetailsTabs({
             <EstimationPanel
               estimation={estimation}
               personaId={personaId}
+              workflowStatus={request.workflowStatus}
+              businessApproved={businessApproved}
               available={estimationAvailable}
               onConfirm={onConfirmEstimation}
+              onApproveBusiness={onApproveBusinessEstimate}
             />
           ) : (
             <EstimationUnavailable />

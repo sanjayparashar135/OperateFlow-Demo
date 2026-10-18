@@ -31,6 +31,7 @@ export function statusTone(status: WorkflowStatus): BadgeTone {
     case 'Awaiting Review':
     case 'Awaiting Technical Review':
     case 'Pending Approval':
+    case 'Approved — Awaiting Assignment':
       return 'warning'
     case 'Closed':
       return 'neutral'

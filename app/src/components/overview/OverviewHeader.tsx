@@ -4,14 +4,19 @@ import { useRole } from '../../context/useRole'
 import { canCreateRequest } from '../../data/capabilities'
 import { getPersonaViewCopy } from '../../data/personaViews'
 import type { PortfolioKpis } from '../../data/portfolioSelectors'
-import { greetingForPersona } from '../../lib/format'
+import { formatDisplayDate, greetingForPersona } from '../../lib/format'
 
 interface OverviewHeaderProps {
   kpis: PortfolioKpis
   visibleCount: number
+  simulatedToday: string
 }
 
-export function OverviewHeader({ kpis, visibleCount }: OverviewHeaderProps) {
+export function OverviewHeader({
+  kpis,
+  visibleCount,
+  simulatedToday,
+}: OverviewHeaderProps) {
   const { currentPersona } = useRole()
   const viewCopy = getPersonaViewCopy(currentPersona.id)
   const showNewRequest = canCreateRequest(currentPersona.id)
@@ -27,7 +32,8 @@ export function OverviewHeader({ kpis, visibleCount }: OverviewHeaderProps) {
         </h1>
         <p className="mt-2 text-[15px] leading-relaxed text-of-ink-secondary">
           {viewCopy.overviewBlurb} {visibleCount} visible · {kpis.activeRequests}{' '}
-          active · {kpis.needsAttention} needing attention (as of Oct 17, 2026).
+          active · {kpis.needsAttention} needing attention (as of{' '}
+          {formatDisplayDate(simulatedToday)}).
         </p>
       </div>
 

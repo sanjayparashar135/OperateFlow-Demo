@@ -11,7 +11,7 @@ export function ResetDemoButton() {
       type="button"
       onClick={() => {
         const confirmed = window.confirm(
-          'Reset Demo will clear REQ1235 and restore the initial portfolio. Your selected persona will be kept. Continue?',
+          'Reset Demo will clear REQ1235, restore the initial portfolio, and reset the simulated date to October 17. Your selected persona will be kept. Continue?',
         )
         if (confirmed) {
           resetDemo()
