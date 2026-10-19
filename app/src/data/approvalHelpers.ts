@@ -7,7 +7,12 @@ import type {
 } from '../types/simulation'
 import { MAIN_JIRA_ID, MAIN_REQUEST_ID } from '../types/simulation'
 import type { PersonaId } from '../types/persona'
+import { formatDisplayDate } from '../lib/format'
 import { hydrateEstimationDecision, isEstimationConfirmed } from './estimationHelpers'
+import {
+  getActiveDemoCalendar,
+  type DemoCalendar,
+} from './simDate'
 
 export const APPROVAL_TIMELINE_EVENT_ID = 'tl-req1235-07'
 export const ASSIGNMENT_TIMELINE_EVENT_ID = 'tl-req1235-08'
@@ -18,9 +23,13 @@ export const ASSIGNED_DEVELOPER_ID: PersonaId = 'ajay-raj'
 export const ASSIGNMENT_OWNER_ID: PersonaId = 'radhe-shyam'
 export const BUSINESS_APPROVER_ID: PersonaId = 'john-harrison'
 
-export const DEFAULT_EXECUTION_STATE: ExecutionState = {
-  reportedProgressPercent: 60,
-  lastDeveloperUpdateDate: '2026-10-19',
+export function getDefaultExecutionState(
+  calendar: DemoCalendar = getActiveDemoCalendar(),
+): ExecutionState {
+  return {
+    reportedProgressPercent: 60,
+    lastDeveloperUpdateDate: calendar.lastDeveloperUpdateDate,
+  }
 }
 
 export type ApplyTransitionResult =
@@ -189,6 +198,7 @@ export function applyResourceAssignment(
   bundle: SubmittedSimulationBundle,
   assignedById: PersonaId,
   referenceDate: string,
+  calendar: DemoCalendar = getActiveDemoCalendar(),
 ): ApplyTransitionResult {
   if (assignedById !== ASSIGNMENT_OWNER_ID) {
     return { ok: false, reason: 'Only Radhe Shyam may assign delivery resources.' }
@@ -204,13 +214,13 @@ export function applyResourceAssignment(
     assignedAt,
     assignedDeveloperId: ASSIGNED_DEVELOPER_ID,
   }
+  const targetLabel = formatDisplayDate(calendar.targetDate)
 
   const linkedRecords = bundle.linkedRecords.map((record) => {
     if (record.id !== MAIN_JIRA_ID) return record
     return {
       ...record,
-      detail:
-        'Assigned to Ajay Raj in Application Delivery. Work is in progress toward the October 23 target.',
+      detail: `Assigned to Ajay Raj in Application Delivery. Work is in progress toward the ${targetLabel} target.`,
     }
   })
 
@@ -220,7 +230,7 @@ export function applyResourceAssignment(
       ...bundle,
       approval: hydrateApprovalRecord(bundle.approval),
       assignment,
-      execution: { ...DEFAULT_EXECUTION_STATE },
+      execution: getDefaultExecutionState(calendar),
       linkedRecords,
       mainRequest: {
         ...bundle.mainRequest,
@@ -244,7 +254,7 @@ export function applyResourceAssignment(
           requestId: MAIN_REQUEST_ID,
           timestamp: assignedAt,
           title: 'Developer assigned',
-          detail: `Radhe Shyam assigned Ajay Raj to ${MAIN_JIRA_ID}. Request moved to Execution / In Progress. Target date remains 2026-10-23.`,
+          detail: `Radhe Shyam assigned Ajay Raj to ${MAIN_JIRA_ID}. Request moved to Execution / In Progress. Target date remains ${calendar.targetDate}.`,
           source: 'human',
           category: 'assignment',
         },

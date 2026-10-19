@@ -9,6 +9,7 @@ import {
 } from '../data/collaborationChannel'
 import { getNavItemByPath } from '../data/navigation'
 import { isRequestVisibleToPersona } from '../data/portfolioSelectors'
+import { formatDisplayDate } from '../lib/format'
 import type { CollaborationChannelId } from '../types/simulation'
 import { MAIN_REQUEST_ID } from '../types/simulation'
 
@@ -20,6 +21,7 @@ export function FollowUpsPage() {
     getRequestBundle,
     respondToFollowUp,
     simulatedToday,
+    demoCalendar,
     hasMainRequest,
     collaborationChannelId,
     setCollaborationChannelId,
@@ -91,6 +93,7 @@ export function FollowUpsPage() {
           followUp={followUp}
           personaId={currentPersona.id}
           simulatedToday={simulatedToday}
+          targetDateLabel={formatDisplayDate(demoCalendar.targetDate)}
           channelId={collaborationChannelId}
           onRespond={(kind, detail) =>
             respondToFollowUp({
@@ -111,7 +114,7 @@ export function FollowUpsPage() {
               ? 'Submit Intelligent Intake, complete estimation, business approval, and resource assignment first.'
               : mainBundle?.request.lifecycleStage !== 'Execution'
                 ? 'Complete business approval and resource assignment to move REQ1235 into Execution.'
-                : 'Open Execution and advance the simulated date to October 21 to trigger the collaboration follow-up.'}
+                : `Open Execution and advance the simulated date to ${formatDisplayDate(demoCalendar.advanceDate)} to trigger the collaboration follow-up.`}
           </p>
           <div className="mt-4 flex flex-wrap gap-3 text-sm font-semibold">
             <Link

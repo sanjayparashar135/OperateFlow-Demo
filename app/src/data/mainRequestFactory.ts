@@ -7,7 +7,11 @@ import type {
 } from '../types/simulation'
 import { MAIN_JIRA_ID, MAIN_REQUEST_ID } from '../types/simulation'
 import { getDefaultEstimationDecision } from './estimationHelpers'
-import { getSimulatedToday } from './simDate'
+import {
+  getActiveDemoCalendar,
+  getSimulatedToday,
+  type DemoCalendar,
+} from './simDate'
 
 export function buildDefaultStructuredRequirements(): StructuredRequirements {
   return {
@@ -47,6 +51,7 @@ export function buildSummaryFromRequirements(
 function buildMainRequest(
   requirements: StructuredRequirements,
   referenceDate: string,
+  calendar: DemoCalendar,
 ): DeliveryRequest {
   return {
     id: MAIN_REQUEST_ID,
@@ -61,7 +66,7 @@ function buildMainRequest(
     workflowStatus: 'Awaiting Technical Review',
     deliveryHealth: 'On Track',
     priority: requirements.priority,
-    targetDate: '2026-10-23',
+    targetDate: calendar.targetDate,
     lastUpdated: referenceDate,
     summary: buildSummaryFromRequirements(requirements),
     attentionReasons: [
@@ -151,6 +156,7 @@ function buildTimelineEvents(
 export function createSubmittedMainRequestBundle(
   requirements: StructuredRequirements,
   referenceDate: string = getSimulatedToday(),
+  calendar: DemoCalendar = getActiveDemoCalendar(),
 ): SubmittedSimulationBundle {
   const confirmed: StructuredRequirements = {
     ...requirements,
@@ -160,7 +166,7 @@ export function createSubmittedMainRequestBundle(
     confirmationState: 'human_confirmed',
   }
 
-  const mainRequest = buildMainRequest(confirmed, referenceDate)
+  const mainRequest = buildMainRequest(confirmed, referenceDate, calendar)
 
   return {
     mainRequest,

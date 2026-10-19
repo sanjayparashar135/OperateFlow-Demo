@@ -16,9 +16,9 @@ import {
 } from '../types/delivery'
 import { PERSONAS } from './personas'
 import {
-  DELIVERY_INSIGHTS,
-  PORTFOLIO_REQUESTS,
-  RECENT_ACTIVITY,
+  getDeliveryInsights as getSeedDeliveryInsights,
+  getPortfolioRequests as getSeedPortfolioRequests,
+  getRecentActivity as getSeedRecentActivity,
 } from './portfolio'
 import { getSimulatedToday } from './simDate'
 
@@ -173,7 +173,7 @@ export function personaRelatesToRequest(
 
 export function getVisibleRequests(
   personaId: PersonaId,
-  requests: DeliveryRequest[] = PORTFOLIO_REQUESTS,
+  requests: DeliveryRequest[] = getSeedPortfolioRequests(),
 ): DeliveryRequest[] {
   return requests.filter((request) =>
     isRequestVisibleToPersona(request, personaId),
@@ -181,20 +181,20 @@ export function getVisibleRequests(
 }
 
 export function getPortfolioRequests(
-  requests: DeliveryRequest[] = PORTFOLIO_REQUESTS,
+  requests: DeliveryRequest[] = getSeedPortfolioRequests(),
 ): DeliveryRequest[] {
   return requests
 }
 
 export function getRequestById(
   id: string,
-  requests: DeliveryRequest[] = PORTFOLIO_REQUESTS,
+  requests: DeliveryRequest[] = getSeedPortfolioRequests(),
 ): DeliveryRequest | undefined {
   return requests.find((request) => request.id === id)
 }
 
 export function getAttentionItems(
-  requests: DeliveryRequest[] = PORTFOLIO_REQUESTS,
+  requests: DeliveryRequest[] = getSeedPortfolioRequests(),
   referenceDate: string = getSimulatedToday(),
 ): AttentionItem[] {
   return requests
@@ -212,7 +212,7 @@ export function getAttentionItems(
 }
 
 export function getPortfolioKpis(
-  requests: DeliveryRequest[] = PORTFOLIO_REQUESTS,
+  requests: DeliveryRequest[] = getSeedPortfolioRequests(),
   referenceDate: string = getSimulatedToday(),
 ): PortfolioKpis {
   const activeRequests = requests.filter((request) => !isClosed(request)).length
@@ -233,7 +233,7 @@ export function getPortfolioKpis(
 }
 
 export function getLifecycleDistribution(
-  requests: DeliveryRequest[] = PORTFOLIO_REQUESTS,
+  requests: DeliveryRequest[] = getSeedPortfolioRequests(),
 ): LifecycleBucket[] {
   const counts = new Map<LifecycleStage, number>(
     LIFECYCLE_STAGES.map((stage) => [stage, 0]),
@@ -312,7 +312,7 @@ function scopeInsightDetail(
  */
 export function getScopedInsights(
   visibleRequests: DeliveryRequest[],
-  insights: DeliveryInsight[] = DELIVERY_INSIGHTS,
+  insights: DeliveryInsight[] = getSeedDeliveryInsights(),
   limit = 2,
 ): DeliveryInsight[] {
   const visibleById = new Map(
@@ -340,7 +340,7 @@ export function getScopedInsights(
 
 export function getScopedActivity(
   visibleRequests: DeliveryRequest[],
-  activity: ActivityEntry[] = RECENT_ACTIVITY,
+  activity: ActivityEntry[] = getSeedRecentActivity(),
 ): ActivityEntry[] {
   const visibleIds = new Set(visibleRequests.map((request) => request.id))
   return activity
@@ -396,21 +396,21 @@ export function requestsViewLabel(view: RequestsViewPreset): string {
 }
 
 export function getDeliveryInsights(
-  insights: DeliveryInsight[] = DELIVERY_INSIGHTS,
+  insights: DeliveryInsight[] = getSeedDeliveryInsights(),
 ): DeliveryInsight[] {
   return insights
 }
 
 export function getRecentActivity(
-  activity: ActivityEntry[] = RECENT_ACTIVITY,
+  activity: ActivityEntry[] = getSeedRecentActivity(),
 ): ActivityEntry[] {
   return [...activity].sort((a, b) => b.timestamp.localeCompare(a.timestamp))
 }
 
 export function validatePortfolioConsistency(
-  requests: DeliveryRequest[] = PORTFOLIO_REQUESTS,
-  activity: ActivityEntry[] = RECENT_ACTIVITY,
-  insights: DeliveryInsight[] = DELIVERY_INSIGHTS,
+  requests: DeliveryRequest[] = getSeedPortfolioRequests(),
+  activity: ActivityEntry[] = getSeedRecentActivity(),
+  insights: DeliveryInsight[] = getSeedDeliveryInsights(),
   referenceDate: string = getSimulatedToday(),
 ): string[] {
   const ids = new Set(requests.map((request) => request.id))

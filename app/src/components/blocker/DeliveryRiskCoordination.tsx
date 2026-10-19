@@ -8,13 +8,14 @@ import type {
   CoordinationActionId,
 } from '../../types/simulation'
 import {
-  AI_STAKEHOLDER_UPDATE_DRAFT,
   BUILD7_MEETING_HANDOFF,
-  COORDINATION_ACTIONS,
   DEFAULT_NEXT_UPDATE_NOTE,
+  buildAiStakeholderUpdateDraft,
   getCoordinationAction,
+  getCoordinationActions,
   STAKEHOLDER_RECIPIENT_ID,
 } from '../../data/blockerCoordinationDataset'
+import { useSimulation } from '../../context/useSimulation'
 import { ScheduledMeetingAssociation } from '../meetings/ScheduledMeetingAssociation'
 import { getDiagnosticDirection } from '../../data/blockerTroubleshootingDataset'
 import { BLOCKED_TECHNICAL_DETAIL } from '../../data/followUpDataset'
@@ -46,6 +47,9 @@ export function DeliveryRiskCoordination({
   onSaveCoordination,
   onConfirmCommunication,
 }: DeliveryRiskCoordinationProps) {
+  const { demoCalendar } = useSimulation()
+  const coordinationActions = getCoordinationActions(demoCalendar)
+  const stakeholderDraft = buildAiStakeholderUpdateDraft(demoCalendar)
   const confirmed =
     blockerResolution.stakeholderCommunication.decisionState === 'confirmed'
   const troubleshooting = blockerResolution.troubleshooting
@@ -54,7 +58,7 @@ export function DeliveryRiskCoordination({
   )
   const [message, setMessage] = useState(
     blockerResolution.stakeholderCommunication.confirmedMessage ??
-      AI_STAKEHOLDER_UPDATE_DRAFT,
+      stakeholderDraft,
   )
   const [includeNextUpdate, setIncludeNextUpdate] = useState(
     Boolean(blockerResolution.stakeholderCommunication.nextUpdateNote),
@@ -75,7 +79,7 @@ export function DeliveryRiskCoordination({
 
   if (confirmed) {
     const planned = blockerResolution.coordination.selectedActionIds
-      .map((id) => getCoordinationAction(id))
+      .map((id) => getCoordinationAction(id, demoCalendar))
       .filter(Boolean)
 
     return (
@@ -220,7 +224,7 @@ export function DeliveryRiskCoordination({
           assigned or sent automatically.
         </p>
         <div className="mt-3 flex flex-col gap-2">
-          {COORDINATION_ACTIONS.map((action) => {
+          {coordinationActions.map((action) => {
             const checked = selectedActions.includes(action.id)
             return (
               <label
@@ -258,7 +262,7 @@ export function DeliveryRiskCoordination({
             </p>
             <ul className="mt-2 mb-0 list-disc space-y-1 pl-5 text-sm text-of-ink-secondary">
               {selectedActions.map((id) => {
-                const action = getCoordinationAction(id)
+                const action = getCoordinationAction(id, demoCalendar)
                 return action ? (
                   <li key={id}>
                     <span className="font-medium text-of-ink">

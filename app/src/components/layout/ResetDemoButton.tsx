@@ -1,8 +1,9 @@
 import { RotateCcw } from 'lucide-react'
 import { useSimulation } from '../../context/useSimulation'
+import { formatDisplayDate } from '../../lib/format'
 
 export function ResetDemoButton() {
-  const { hasMainRequest, resetDemo } = useSimulation()
+  const { hasMainRequest, resetDemo, demoCalendar } = useSimulation()
 
   if (!hasMainRequest) return null
 
@@ -11,7 +12,7 @@ export function ResetDemoButton() {
       type="button"
       onClick={() => {
         const confirmed = window.confirm(
-          'Reset Demo will clear REQ1235, restore the initial portfolio, and reset the simulated date to October 17. Your selected persona will be kept. Continue?',
+          `Reset Demo will clear REQ1235, restore the initial portfolio, and start a fresh simulated calendar from today's local date (currently anchored at ${formatDisplayDate(demoCalendar.baselineDate)}). Your selected persona will be kept. Continue?`,
         )
         if (confirmed) {
           resetDemo()

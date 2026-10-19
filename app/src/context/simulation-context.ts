@@ -7,6 +7,7 @@ import type {
 import type { ConfirmEstimationInput } from '../data/estimationHelpers'
 import type { FollowUpResponseInput } from '../data/followUpHelpers'
 import type { ConfirmMeetingInput } from '../data/meetingHelpers'
+import type { DemoCalendar } from '../data/simDate'
 import type { ActivityEntry, DeliveryRequest } from '../types/delivery'
 import type { PersonaId } from '../types/persona'
 import type {
@@ -45,6 +46,8 @@ export interface SimulationContextValue {
   activity: ActivityEntry[]
   hasMainRequest: boolean
   mainRequestId: string | null
+  /** Session-stable demo calendar (anchor + derived storyline dates). */
+  demoCalendar: DemoCalendar
   /** Authoritative simulated calendar date for the active demo session. */
   simulatedToday: string
   /** Presentation-only client collaboration channel (Teams default). */
@@ -66,7 +69,7 @@ export interface SimulationContextValue {
   /** Radhe assigns Ajay and moves the request into Execution. */
   assignResources: (assignedById: PersonaId) => boolean
   /**
-   * Presenter advance from baseline to October 21. Creates the
+   * Presenter advance from baseline to advanceDate (D+4). Creates the
    * collaboration follow-up when trigger rules match.
    */
   advanceSimulatedDate: () => boolean

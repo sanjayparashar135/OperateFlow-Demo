@@ -7,10 +7,15 @@ import type {
   SubmittedSimulationBundle,
 } from '../types/simulation'
 import { MAIN_REQUEST_ID } from '../types/simulation'
+import { formatDisplayDate } from '../lib/format'
 import {
   getCoordinationActionLabels,
   STAKEHOLDER_RECIPIENT_ID,
 } from './blockerCoordinationDataset'
+import {
+  getActiveDemoCalendar,
+  type DemoCalendar,
+} from './simDate'
 import {
   canConfirmStakeholderCommunication,
   canRecordTroubleshooting,
@@ -326,6 +331,7 @@ export interface ConfirmStakeholderInput {
 export function applyStakeholderCommunication(
   bundle: SubmittedSimulationBundle,
   input: ConfirmStakeholderInput,
+  calendar: DemoCalendar = getActiveDemoCalendar(),
 ): ApplyBlockerResult {
   if (!canConfirmStakeholderCommunication(input.confirmedById)) {
     return {
@@ -419,7 +425,7 @@ export function applyStakeholderCommunication(
         deliveryHealth: 'At Risk',
         lastUpdated: input.referenceDate,
         attentionReasons: [
-          'Business owner notified; October 23 target under assessment',
+          `Business owner notified; ${formatDisplayDate(calendar.targetDate)} target under assessment`,
         ],
       },
       timelineEvents: [

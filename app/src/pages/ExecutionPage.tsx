@@ -5,7 +5,6 @@ import { useRole } from '../context/useRole'
 import { useSimulation } from '../context/useSimulation'
 import { getNavItemByPath } from '../data/navigation'
 import { getVisibleRequests } from '../data/portfolioSelectors'
-import { SIMULATED_TODAY } from '../data/simDate'
 import { MAIN_REQUEST_ID } from '../types/simulation'
 
 const page = getNavItemByPath('/execution')
@@ -15,6 +14,7 @@ export function ExecutionPage() {
   const {
     requests,
     simulatedToday,
+    demoCalendar,
     getRequestBundle,
     advanceSimulatedDate,
     bundle,
@@ -31,7 +31,7 @@ export function ExecutionPage() {
     bundle !== null &&
     bundle.mainRequest.lifecycleStage === 'Execution' &&
     Boolean(bundle.approval && bundle.execution) &&
-    simulatedToday === SIMULATED_TODAY
+    simulatedToday === demoCalendar.baselineDate
 
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-5">
@@ -54,6 +54,8 @@ export function ExecutionPage() {
 
       <AdvanceSimDateControl
         simulatedToday={simulatedToday}
+        baselineDate={demoCalendar.baselineDate}
+        advanceDate={demoCalendar.advanceDate}
         canAdvance={canAdvance}
         followUpOpen={mainBundle?.followUp?.status === 'open'}
         onAdvance={advanceSimulatedDate}

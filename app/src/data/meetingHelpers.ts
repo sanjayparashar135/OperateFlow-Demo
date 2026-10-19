@@ -8,7 +8,6 @@ import { canConfirmMeeting } from './capabilities'
 import { BLOCKED_TECHNICAL_DETAIL } from './followUpDataset'
 import {
   MEETING_ACTIVITY_ID,
-  MEETING_AI_RATIONALE,
   MEETING_DEFAULT_AGENDA,
   MEETING_DEFAULT_DURATION_MINUTES,
   MEETING_DEFAULT_PURPOSE,
@@ -19,11 +18,18 @@ import {
   MEETING_RELATED_WORK_LABEL,
   MEETING_REQUIRED_ATTENDEE_IDS,
   MEETING_SAMPLE_PROMPT,
-  MEETING_SCHEDULE_NOTE,
   MEETING_TIMELINE_EVENT_ID,
+  buildMeetingAiRationale,
+  buildMeetingScheduleNote,
   type MeetingSuggestion,
 } from './meetingDataset'
 import { personaDisplayName } from '../lib/requestParties'
+import { formatDisplayDate } from '../lib/format'
+import {
+  addDaysIso,
+  getActiveDemoCalendar,
+  type DemoCalendar,
+} from './simDate'
 
 const TIME_PATTERN = /^([01]\d|2[0-3]):([0-5]\d)$/
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/
@@ -49,16 +55,7 @@ export interface ConfirmMeetingInput {
   referenceDate: string
 }
 
-/** Add one calendar day to YYYY-MM-DD using UTC arithmetic. */
-export function addDaysIso(isoDate: string, days: number): string {
-  const [year, month, day] = isoDate.split('-').map(Number)
-  const date = new Date(Date.UTC(year, month - 1, day))
-  date.setUTCDate(date.getUTCDate() + days)
-  const y = date.getUTCFullYear()
-  const m = String(date.getUTCMonth() + 1).padStart(2, '0')
-  const d = String(date.getUTCDate()).padStart(2, '0')
-  return `${y}-${m}-${d}`
-}
+export { addDaysIso }
 
 export function computeEndTime(
   startTime: string,
@@ -76,6 +73,7 @@ export function computeEndTime(
 
 export function buildDefaultMeetingSuggestion(
   simulatedToday: string,
+  calendar: DemoCalendar = getActiveDemoCalendar(),
 ): MeetingSuggestion {
   const meetingDate = addDaysIso(simulatedToday, 1)
   const endTime =
@@ -93,8 +91,8 @@ export function buildDefaultMeetingSuggestion(
     optionalAttendeeId: MEETING_OPTIONAL_ATTENDEE_ID,
     includeOptionalAttendee: false,
     agenda: [...MEETING_DEFAULT_AGENDA],
-    rationale: MEETING_AI_RATIONALE,
-    scheduleNote: MEETING_SCHEDULE_NOTE,
+    rationale: buildMeetingAiRationale(calendar),
+    scheduleNote: buildMeetingScheduleNote(meetingDate),
     relatedWorkLabel: MEETING_RELATED_WORK_LABEL,
   }
 }
@@ -262,6 +260,7 @@ export function validateConfirmMeetingInput(
 export function applyMeetingConfirmation(
   bundle: SubmittedSimulationBundle,
   input: ConfirmMeetingInput,
+  calendar: DemoCalendar = getActiveDemoCalendar(),
 ): ApplyMeetingResult {
   if (!canConfirmMeeting(input.confirmedById)) {
     return {
@@ -334,7 +333,7 @@ export function applyMeetingConfirmation(
       parties: { ...partiesBefore },
       lastUpdated: input.referenceDate,
       attentionReasons: [
-        'Technical coordination meeting scheduled; October 23 target remains under assessment',
+        `Technical coordination meeting scheduled; ${formatDisplayDate(calendar.targetDate)} target remains under assessment`,
       ],
     },
     timelineEvents: [

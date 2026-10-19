@@ -21,9 +21,7 @@ import {
   hydrateApprovalRecord,
   hydrateAssignmentRecord,
 } from '../src/data/approvalHelpers.ts'
-import {
-  AI_STAKEHOLDER_UPDATE_DRAFT,
-} from '../src/data/blockerCoordinationDataset.ts'
+import { buildAiStakeholderUpdateDraft } from '../src/data/blockerCoordinationDataset.ts'
 import {
   applyCoordinationSelection,
   applyStakeholderCommunication,
@@ -69,6 +67,7 @@ import {
   MEETING_ID,
   MEETING_SAMPLE_PROMPT,
   MEETING_TIMELINE_EVENT_ID,
+  buildMeetingScheduleNote,
 } from '../src/data/meetingDataset.ts'
 import {
   buildMeetingRequestBriefing,
@@ -81,9 +80,9 @@ import {
   parseMeetingIntent,
 } from '../src/data/meetingHelpers.ts'
 import {
-  DELIVERY_INSIGHTS,
-  PORTFOLIO_REQUESTS,
-  RECENT_ACTIVITY,
+  getDeliveryInsights,
+  getPortfolioRequests,
+  getRecentActivity,
 } from '../src/data/portfolio.ts'
 import {
   EXPECTED_PERSONA_VISIBLE_COUNTS,
@@ -94,13 +93,30 @@ import {
 } from '../src/data/portfolioSelectors.ts'
 import { PERSONAS } from '../src/data/personas.ts'
 import {
-  SIMULATED_ADVANCE_DATE,
-  SIMULATED_TODAY,
+  addDaysIso,
+  createDemoCalendar,
+  setActiveDemoCalendar,
+  type DemoCalendar,
 } from '../src/data/simDate.ts'
 import {
   MAIN_JIRA_ID,
   MAIN_REQUEST_ID,
 } from '../src/types/simulation.ts'
+
+const PRIMARY_ANCHOR = '2026-11-15'
+const MATRIX_ANCHORS = ['2026-11-15', '2026-12-28', '2027-01-05'] as const
+
+const calendar = createDemoCalendar(PRIMARY_ANCHOR)
+setActiveDemoCalendar(calendar)
+
+const SIMULATED_TODAY = calendar.baselineDate
+const SIMULATED_ADVANCE_DATE = calendar.advanceDate
+const MEETING_DATE = addDaysIso(SIMULATED_ADVANCE_DATE, 1)
+const PAST_MEETING_DATE = addDaysIso(SIMULATED_ADVANCE_DATE, -1)
+const PORTFOLIO_REQUESTS = getPortfolioRequests(SIMULATED_TODAY)
+const RECENT_ACTIVITY = getRecentActivity(SIMULATED_TODAY)
+const DELIVERY_INSIGHTS = getDeliveryInsights(SIMULATED_TODAY)
+const AI_STAKEHOLDER_UPDATE_DRAFT = buildAiStakeholderUpdateDraft(calendar)
 
 const issues: string[] = []
 
@@ -108,8 +124,13 @@ function assert(condition: boolean, message: string) {
   if (!condition) issues.push(message)
 }
 
-// --- Seed remains Build 2 baseline ---
-const seedIssues = validatePortfolioConsistency()
+// --- Seed remains Build 2 baseline (relative to active calendar) ---
+const seedIssues = validatePortfolioConsistency(
+  PORTFOLIO_REQUESTS,
+  RECENT_ACTIVITY,
+  DELIVERY_INSIGHTS,
+  SIMULATED_TODAY,
+)
 assert(seedIssues.length === 0, `Seed consistency failed: ${seedIssues.join('; ')}`)
 assert(PORTFOLIO_REQUESTS.length === 12, 'Seed portfolio must remain 12 records')
 assert(
@@ -121,6 +142,18 @@ assert(
     MAIN_JIRA_ID,
   ),
   'Seed data must not include JIRA-122345',
+)
+assert(
+  calendar.targetDate === addDaysIso(calendar.demoAnchorDate, 6),
+  'Target must be anchor + 6 days',
+)
+assert(
+  calendar.advanceDate === addDaysIso(calendar.demoAnchorDate, 4),
+  'Advance must be anchor + 4 days',
+)
+assert(
+  calendar.lastDeveloperUpdateDate === addDaysIso(calendar.demoAnchorDate, 2),
+  'Last developer update must be anchor + 2 days',
 )
 
 for (const persona of PERSONAS) {
@@ -175,8 +208,8 @@ assert(
 )
 assert(bundle.mainRequest.priority === 'High', 'Priority must be High')
 assert(
-  bundle.mainRequest.targetDate === '2026-10-23',
-  'Target date must be 2026-10-23',
+  bundle.mainRequest.targetDate === calendar.targetDate,
+  `Target date must be ${calendar.targetDate}`,
 )
 
 const estimationPending = hydrateEstimationDecision(bundle.estimation)
@@ -914,8 +947,8 @@ if (acceptResult.ok) {
           assert(intent.ok === true, 'Sample meeting intent must be recognized')
           if (intent.ok) {
             assert(
-              intent.suggestion.meetingDate === '2026-10-22',
-              'Sample intent resolves to October 22',
+              intent.suggestion.meetingDate === MEETING_DATE,
+              `Sample intent resolves to ${MEETING_DATE}`,
             )
             assert(
               intent.suggestion.startTime === '10:00' &&
@@ -940,7 +973,7 @@ if (acceptResult.ok) {
             applyMeetingConfirmation(structuredClone(meetingBase), {
               title: MEETING_DEFAULT_TITLE,
               purpose: 'Coordinate investigation',
-              meetingDate: '2026-10-22',
+              meetingDate: MEETING_DATE,
               startTime: '10:00',
               durationMinutes: 30,
               attendeeIds: [
@@ -960,7 +993,7 @@ if (acceptResult.ok) {
             applyMeetingConfirmation(structuredClone(meetingBase), {
               title: '',
               purpose: 'Coordinate investigation',
-              meetingDate: '2026-10-22',
+              meetingDate: MEETING_DATE,
               startTime: '10:00',
               durationMinutes: 30,
               attendeeIds: [
@@ -980,7 +1013,7 @@ if (acceptResult.ok) {
             applyMeetingConfirmation(structuredClone(meetingBase), {
               title: MEETING_DEFAULT_TITLE,
               purpose: 'Coordinate investigation',
-              meetingDate: '2026-10-20',
+              meetingDate: PAST_MEETING_DATE,
               startTime: '10:00',
               durationMinutes: 30,
               attendeeIds: [
@@ -1000,7 +1033,7 @@ if (acceptResult.ok) {
             applyMeetingConfirmation(structuredClone(meetingBase), {
               title: MEETING_DEFAULT_TITLE,
               purpose: 'Coordinate investigation',
-              meetingDate: '2026-10-22',
+              meetingDate: MEETING_DATE,
               startTime: '10:00',
               durationMinutes: 30,
               attendeeIds: ['radhe-shyam'],
@@ -1018,7 +1051,7 @@ if (acceptResult.ok) {
             {
               title: editedTitle,
               purpose: 'Focus the technical investigation owners.',
-              meetingDate: '2026-10-22',
+              meetingDate: MEETING_DATE,
               startTime: '10:00',
               durationMinutes: 30,
               attendeeIds: [
@@ -1027,7 +1060,7 @@ if (acceptResult.ok) {
                 'sreekanth-mamdekar',
               ],
               agenda: [...MEETING_DEFAULT_AGENDA],
-              scheduleNote: 'Recommended demo slot for October 22 (not calendar-verified).',
+              scheduleNote: buildMeetingScheduleNote(MEETING_DATE),
               confirmedById: 'radhe-shyam',
               referenceDate: SIMULATED_ADVANCE_DATE,
             },
@@ -1141,7 +1174,8 @@ if (acceptResult.ok) {
                   'Blocked' &&
                 meetingConfirmed.bundle.mainRequest.deliveryHealth ===
                   'At Risk' &&
-                meetingConfirmed.bundle.mainRequest.targetDate === '2026-10-23',
+                meetingConfirmed.bundle.mainRequest.targetDate ===
+                  calendar.targetDate,
               'REQ1235 remains Execution / Blocked / At Risk with Oct 23 target',
             )
             assert(
@@ -1162,7 +1196,7 @@ if (acceptResult.ok) {
                 {
                   title: 'Duplicate',
                   purpose: 'Should fail',
-                  meetingDate: '2026-10-22',
+                  meetingDate: MEETING_DATE,
                   startTime: '10:00',
                   durationMinutes: 30,
                   attendeeIds: [
@@ -1184,7 +1218,7 @@ if (acceptResult.ok) {
               {
                 title: MEETING_DEFAULT_TITLE,
                 purpose: 'Include architect',
-                meetingDate: '2026-10-22',
+                meetingDate: MEETING_DATE,
                 startTime: '10:00',
                 durationMinutes: 30,
                 attendeeIds: [
@@ -1291,7 +1325,7 @@ if (acceptResult.ok) {
     assignment: undefined,
     execution: {
       reportedProgressPercent: 60,
-      lastDeveloperUpdateDate: '2026-10-19',
+      lastDeveloperUpdateDate: calendar.lastDeveloperUpdateDate,
     },
     mainRequest: {
       ...acceptResult.bundle.mainRequest,
@@ -1342,11 +1376,124 @@ for (const persona of PERSONAS) {
     `After reset visible for ${persona.id} should match seed`,
   )
 }
-assert(SIMULATED_TODAY === '2026-10-17', 'Baseline simulated date constant must remain Oct 17')
+assert(
+  SIMULATED_TODAY === calendar.demoAnchorDate,
+  'Baseline simulated date must equal the demo anchor',
+)
+
+function assertCalendarMatrix(anchor: string, cal: DemoCalendar): string[] {
+  const localIssues: string[] = []
+  const check = (condition: boolean, message: string) => {
+    if (!condition) localIssues.push(message)
+  }
+  setActiveDemoCalendar(cal)
+  const portfolio = getPortfolioRequests(cal.baselineDate)
+  const activity = getRecentActivity(cal.baselineDate)
+  const insights = getDeliveryInsights(cal.baselineDate)
+  const seed = validatePortfolioConsistency(
+    portfolio,
+    activity,
+    insights,
+    cal.baselineDate,
+  )
+  check(seed.length === 0, `${anchor}: portfolio consistency ${seed.join('; ')}`)
+  check(portfolio.length === 12, `${anchor}: expected 12 portfolio requests`)
+  check(
+    cal.targetDate === addDaysIso(anchor, 6),
+    `${anchor}: target offset`,
+  )
+  check(
+    cal.advanceDate === addDaysIso(anchor, 4),
+    `${anchor}: advance offset`,
+  )
+  check(
+    cal.lastDeveloperUpdateDate === addDaysIso(anchor, 2),
+    `${anchor}: stale-update offset`,
+  )
+
+  const reqs = buildDefaultStructuredRequirements()
+  reqs.confirmationState = 'human_confirmed'
+  const story = createSubmittedMainRequestBundle(reqs, cal.baselineDate, cal)
+  check(
+    story.mainRequest.targetDate === cal.targetDate,
+    `${anchor}: REQ1235 target`,
+  )
+
+  const estimated = applyEstimationConfirmation(story, {
+    mode: 'accepted',
+    confirmedApproach: ESTIMATION_SUGGESTION.defaultApproach,
+    decidedById: 'sanjay-parashar',
+    referenceDate: cal.baselineDate,
+  })
+  check(estimated.ok === true, `${anchor}: estimation confirmation`)
+  if (!estimated.ok) return localIssues
+
+  const approved = applyBusinessApproval(
+    estimated.bundle,
+    'john-harrison',
+    cal.baselineDate,
+  )
+  check(approved.ok === true, `${anchor}: business approval`)
+  if (!approved.ok) return localIssues
+
+  const assigned = applyResourceAssignment(
+    approved.bundle,
+    'radhe-shyam',
+    cal.baselineDate,
+    cal,
+  )
+  check(assigned.ok === true, `${anchor}: resource assignment`)
+  if (!assigned.ok) return localIssues
+
+  check(
+    isFollowUpTriggerEligible(assigned.bundle, cal.baselineDate, cal) === false,
+    `${anchor}: follow-up ineligible at baseline`,
+  )
+  check(
+    isFollowUpTriggerEligible(assigned.bundle, cal.advanceDate, cal) === true,
+    `${anchor}: follow-up eligible at advance`,
+  )
+
+  const intent = parseMeetingIntent(MEETING_SAMPLE_PROMPT, cal.advanceDate)
+  check(intent.ok === true, `${anchor}: meeting intent`)
+  if (intent.ok) {
+    check(
+      intent.suggestion.meetingDate === addDaysIso(cal.advanceDate, 1),
+      `${anchor}: meeting is tomorrow from advance`,
+    )
+  }
+
+  // Closed historical requests stay in the past relative to baseline.
+  const closed = portfolio.filter(
+    (request) => request.id === 'REQ1211' || request.id === 'REQ1212',
+  )
+  check(
+    closed.every(
+      (request) =>
+        request.targetDate < cal.baselineDate &&
+        request.lastUpdated < cal.baselineDate,
+    ),
+    `${anchor}: closed requests remain historical`,
+  )
+
+  return localIssues
+}
+
+const matrixIssues = MATRIX_ANCHORS.flatMap((anchor) =>
+  assertCalendarMatrix(anchor, createDemoCalendar(anchor)),
+)
+for (const message of matrixIssues) {
+  issues.push(message)
+}
+
+// Restore primary calendar for report consistency.
+setActiveDemoCalendar(calendar)
 
 const report = {
   ok: issues.length === 0,
   issues,
+  primaryAnchor: PRIMARY_ANCHOR,
+  matrixAnchors: [...MATRIX_ANCHORS],
   seedSize: PORTFOLIO_REQUESTS.length,
   mergedSize: merged.length,
   postSubmitVisible: Object.fromEntries(
@@ -1358,6 +1505,8 @@ const report = {
   radheKpis,
   suggestionHours: ESTIMATION_SUGGESTION.suggestedHours,
   advanceDate: SIMULATED_ADVANCE_DATE,
+  targetDate: calendar.targetDate,
+  meetingDate: MEETING_DATE,
 }
 
 console.log(JSON.stringify(report, null, 2))

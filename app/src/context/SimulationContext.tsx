@@ -41,10 +41,18 @@ import {
   type ConfirmMeetingInput,
 } from '../data/meetingHelpers'
 import { createSubmittedMainRequestBundle } from '../data/mainRequestFactory'
-import { PORTFOLIO_REQUESTS, RECENT_ACTIVITY } from '../data/portfolio'
 import {
-  SIMULATED_ADVANCE_DATE,
-  SIMULATED_TODAY,
+  getPortfolioRequests,
+  getRecentActivity,
+} from '../data/portfolio'
+import {
+  captureFreshDemoCalendar,
+  clearPersistedDemoCalendar,
+  createDemoCalendar,
+  readPersistedDemoCalendar,
+  restoreDemoCalendar,
+  writePersistedDemoCalendar,
+  type DemoCalendar,
 } from '../data/simDate'
 import type { PersonaId } from '../types/persona'
 import type {
@@ -64,9 +72,10 @@ import {
   type SimulationContextValue,
 } from './simulation-context'
 
-interface StoredSimulation {
-  bundle: SubmittedSimulationBundle | null
+interface SessionState {
+  calendar: DemoCalendar
   simulatedToday: string
+  bundle: SubmittedSimulationBundle | null
 }
 
 function isDeliveryRequestShape(value: unknown): boolean {
@@ -98,7 +107,7 @@ function hydrateBundle(
   }
 }
 
-function parsePersisted(raw: string): StoredSimulation | null {
+function parsePersistedBundle(raw: string): SubmittedSimulationBundle | null {
   try {
     const parsed = JSON.parse(raw) as PersistedSimulationV1
     if (parsed.version !== SIMULATION_STORAGE_VERSION) return null
@@ -109,35 +118,38 @@ function parsePersisted(raw: string): StoredSimulation | null {
     if (!Array.isArray(bundle.timelineEvents) || !Array.isArray(bundle.activityEntries)) {
       return null
     }
-    const simulatedToday =
-      typeof parsed.simulatedToday === 'string' && parsed.simulatedToday.length > 0
-        ? parsed.simulatedToday
-        : SIMULATED_TODAY
-    return {
-      bundle: hydrateBundle(bundle),
-      simulatedToday,
-    }
+    return hydrateBundle(bundle)
   } catch {
     return null
   }
 }
 
-function readStored(): StoredSimulation {
+/**
+ * Bundle is kept only when its target date matches the session calendar
+ * (avoids mixing legacy October payloads with a fresh anchor).
+ */
+function readBundleForCalendar(
+  calendar: DemoCalendar,
+): SubmittedSimulationBundle | null {
   try {
     const raw = sessionStorage.getItem(SIMULATION_STORAGE_KEY)
-    if (!raw) {
-      return { bundle: null, simulatedToday: SIMULATED_TODAY }
+    if (!raw) return null
+    const bundle = parsePersistedBundle(raw)
+    if (!bundle) return null
+    if (bundle.mainRequest.targetDate !== calendar.targetDate) {
+      sessionStorage.removeItem(SIMULATION_STORAGE_KEY)
+      return null
     }
-    return parsePersisted(raw) ?? {
-      bundle: null,
-      simulatedToday: SIMULATED_TODAY,
-    }
+    return bundle
   } catch {
-    return { bundle: null, simulatedToday: SIMULATED_TODAY }
+    return null
   }
 }
 
-function writeStored(bundle: SubmittedSimulationBundle, simulatedToday: string): void {
+function writeBundleStored(
+  bundle: SubmittedSimulationBundle,
+  simulatedToday: string,
+): void {
   const payload: PersistedSimulationV1 = {
     version: SIMULATION_STORAGE_VERSION,
     bundle,
@@ -146,7 +158,7 @@ function writeStored(bundle: SubmittedSimulationBundle, simulatedToday: string):
   sessionStorage.setItem(SIMULATION_STORAGE_KEY, JSON.stringify(payload))
 }
 
-function clearStored(): void {
+function clearBundleStored(): void {
   try {
     sessionStorage.removeItem(SIMULATION_STORAGE_KEY)
   } catch {
@@ -154,8 +166,30 @@ function clearStored(): void {
   }
 }
 
+function loadSession(): SessionState {
+  const persistedCalendar = readPersistedDemoCalendar()
+  if (persistedCalendar) {
+    const { calendar, simulatedToday } = restoreDemoCalendar(
+      persistedCalendar.demoAnchorDate,
+      persistedCalendar.simulatedToday,
+    )
+    return {
+      calendar,
+      simulatedToday,
+      bundle: readBundleForCalendar(calendar),
+    }
+  }
+
+  // Legacy October sessions without a demo calendar key are discarded.
+  clearBundleStored()
+  clearPersistedDemoCalendar()
+  const { calendar, simulatedToday } = captureFreshDemoCalendar()
+  return { calendar, simulatedToday, bundle: null }
+}
+
 export function SimulationProvider({ children }: { children: ReactNode }) {
-  const initial = useMemo(() => readStored(), [])
+  const initial = useMemo(() => loadSession(), [])
+  const [calendar, setCalendar] = useState<DemoCalendar>(() => initial.calendar)
   const [bundle, setBundle] = useState<SubmittedSimulationBundle | null>(
     () => initial.bundle,
   )
@@ -167,30 +201,40 @@ export function SimulationProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     try {
+      writePersistedDemoCalendar(calendar.demoAnchorDate, simulatedToday)
       if (bundle) {
-        writeStored(bundle, simulatedToday)
+        writeBundleStored(bundle, simulatedToday)
       } else {
-        clearStored()
+        clearBundleStored()
       }
     } catch {
       // Ignore unavailable sessionStorage.
     }
-  }, [bundle, simulatedToday])
+  }, [bundle, simulatedToday, calendar.demoAnchorDate])
 
   const setCollaborationChannelId = useCallback((id: CollaborationChannelId) => {
     setCollaborationChannelIdState(id)
     writeStoredCollaborationChannel(id)
   }, [])
 
+  const seedRequests = useMemo(
+    () => getPortfolioRequests(calendar.baselineDate),
+    [calendar.baselineDate],
+  )
+  const seedActivity = useMemo(
+    () => getRecentActivity(calendar.baselineDate),
+    [calendar.baselineDate],
+  )
+
   const requests = useMemo(() => {
-    if (!bundle) return PORTFOLIO_REQUESTS
-    return [...PORTFOLIO_REQUESTS, bundle.mainRequest]
-  }, [bundle])
+    if (!bundle) return seedRequests
+    return [...seedRequests, bundle.mainRequest]
+  }, [bundle, seedRequests])
 
   const activity = useMemo(() => {
-    if (!bundle) return RECENT_ACTIVITY
-    return [...RECENT_ACTIVITY, ...bundle.activityEntries]
-  }, [bundle])
+    if (!bundle) return seedActivity
+    return [...seedActivity, ...bundle.activityEntries]
+  }, [bundle, seedActivity])
 
   const getRequestBundle = useCallback(
     (id: string): RequestBundle | null => {
@@ -216,10 +260,16 @@ export function SimulationProvider({ children }: { children: ReactNode }) {
   const submitIntake = useCallback(
     (requirements: StructuredRequirements) => {
       if (bundle !== null) return false
-      setBundle(createSubmittedMainRequestBundle(requirements, simulatedToday))
+      setBundle(
+        createSubmittedMainRequestBundle(
+          requirements,
+          simulatedToday,
+          calendar,
+        ),
+      )
       return true
     },
-    [bundle, simulatedToday],
+    [bundle, simulatedToday, calendar],
   )
 
   const confirmEstimation = useCallback(
@@ -247,21 +297,27 @@ export function SimulationProvider({ children }: { children: ReactNode }) {
   const assignResources = useCallback(
     (assignedById: PersonaId) => {
       if (bundle === null) return false
-      const result = applyResourceAssignment(bundle, assignedById, simulatedToday)
+      const result = applyResourceAssignment(
+        bundle,
+        assignedById,
+        simulatedToday,
+        calendar,
+      )
       if (!result.ok) return false
       setBundle(result.bundle)
       return true
     },
-    [bundle, simulatedToday],
+    [bundle, simulatedToday, calendar],
   )
 
   const advanceSimulatedDate = useCallback(() => {
     if (bundle === null) return false
-    if (simulatedToday === SIMULATED_ADVANCE_DATE) {
+    if (simulatedToday === calendar.advanceDate) {
       const result = applyFollowUpTrigger(
         bundle,
-        SIMULATED_ADVANCE_DATE,
+        calendar.advanceDate,
         collaborationChannelId,
+        calendar,
       )
       if (result.ok && result.created) {
         setBundle(result.bundle)
@@ -269,34 +325,35 @@ export function SimulationProvider({ children }: { children: ReactNode }) {
       }
       return false
     }
-    if (simulatedToday !== SIMULATED_TODAY) return false
+    if (simulatedToday !== calendar.baselineDate) return false
     if (bundle.mainRequest.lifecycleStage !== 'Execution') return false
     if (!bundle.execution) return false
     if (bundle.mainRequest.parties.developerId !== 'ajay-raj') return false
 
-    const nextDate = SIMULATED_ADVANCE_DATE
+    const nextDate = calendar.advanceDate
     setSimulatedToday(nextDate)
     const result = applyFollowUpTrigger(
       bundle,
       nextDate,
       collaborationChannelId,
+      calendar,
     )
     if (result.ok) {
       setBundle(result.bundle)
       return true
     }
     return true
-  }, [bundle, simulatedToday, collaborationChannelId])
+  }, [bundle, simulatedToday, collaborationChannelId, calendar])
 
   const respondToFollowUp = useCallback(
     (input: FollowUpResponseInput) => {
       if (bundle === null) return false
-      const result = applyFollowUpResponse(bundle, input)
+      const result = applyFollowUpResponse(bundle, input, calendar)
       if (!result.ok) return false
       setBundle(result.bundle)
       return true
     },
-    [bundle],
+    [bundle, calendar],
   )
 
   const recordTroubleshootingProgress = useCallback(
@@ -324,29 +381,33 @@ export function SimulationProvider({ children }: { children: ReactNode }) {
   const confirmStakeholderCommunication = useCallback(
     (input: ConfirmStakeholderInput) => {
       if (bundle === null) return false
-      const result = applyStakeholderCommunication(bundle, input)
+      const result = applyStakeholderCommunication(bundle, input, calendar)
       if (!result.ok) return false
       setBundle(result.bundle)
       return true
     },
-    [bundle],
+    [bundle, calendar],
   )
 
   const confirmMeeting = useCallback(
     (input: ConfirmMeetingInput) => {
       if (bundle === null) return false
-      const result = applyMeetingConfirmation(bundle, input)
+      const result = applyMeetingConfirmation(bundle, input, calendar)
       if (!result.ok) return false
       setBundle(result.bundle)
       return true
     },
-    [bundle],
+    [bundle, calendar],
   )
 
   const resetDemo = useCallback(() => {
-    clearStored()
+    clearBundleStored()
+    const { calendar: nextCalendar, simulatedToday: nextToday } =
+      captureFreshDemoCalendar()
+    writePersistedDemoCalendar(nextCalendar.demoAnchorDate, nextToday)
+    setCalendar(createDemoCalendar(nextCalendar.demoAnchorDate))
     setBundle(null)
-    setSimulatedToday(SIMULATED_TODAY)
+    setSimulatedToday(nextToday)
   }, [])
 
   const value = useMemo<SimulationContextValue>(
@@ -355,6 +416,7 @@ export function SimulationProvider({ children }: { children: ReactNode }) {
       activity,
       hasMainRequest: bundle !== null,
       mainRequestId: bundle?.mainRequest.id ?? null,
+      demoCalendar: calendar,
       simulatedToday,
       collaborationChannelId,
       setCollaborationChannelId,
@@ -376,6 +438,7 @@ export function SimulationProvider({ children }: { children: ReactNode }) {
       requests,
       activity,
       bundle,
+      calendar,
       simulatedToday,
       collaborationChannelId,
       setCollaborationChannelId,

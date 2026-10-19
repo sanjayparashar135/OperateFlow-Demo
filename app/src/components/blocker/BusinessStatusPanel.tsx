@@ -116,7 +116,8 @@ export function BusinessStatusPanel({
           <p className="mt-1 m-0 text-sm text-of-ink-secondary">
             A technical coordination meeting has been arranged for{' '}
             {formatDisplayDate(meeting.meetingDate)} to progress investigation
-            of the delivery risk. The October 23 target remains under
+            of the delivery risk. The{' '}
+            {formatDisplayDate(request.targetDate)} target remains under
             assessment.
           </p>
         </div>

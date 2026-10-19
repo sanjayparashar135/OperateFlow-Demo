@@ -230,6 +230,6 @@ export const SIMULATION_STORAGE_VERSION = 1 as const
 export interface PersistedSimulationV1 {
   version: typeof SIMULATION_STORAGE_VERSION
   bundle: SubmittedSimulationBundle
-  /** Optional for Build 3/4 hydration; defaults to baseline Oct 17. */
+  /** Optional hydration; session demoCalendar.v1 is authoritative for dates. */
   simulatedToday?: string
 }

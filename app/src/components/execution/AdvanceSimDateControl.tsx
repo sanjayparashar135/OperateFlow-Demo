@@ -1,10 +1,11 @@
 import { CalendarClock } from 'lucide-react'
-import { SIMULATED_ADVANCE_DATE, SIMULATED_TODAY } from '../../data/simDate'
 import { formatDisplayDate } from '../../lib/format'
 import { Panel, PanelHeader } from '../ui/Panel'
 
 interface AdvanceSimDateControlProps {
   simulatedToday: string
+  baselineDate: string
+  advanceDate: string
   canAdvance: boolean
   followUpOpen: boolean
   onAdvance: () => boolean
@@ -12,11 +13,13 @@ interface AdvanceSimDateControlProps {
 
 export function AdvanceSimDateControl({
   simulatedToday,
+  baselineDate,
+  advanceDate,
   canAdvance,
   followUpOpen,
   onAdvance,
 }: AdvanceSimDateControlProps) {
-  const advanced = simulatedToday === SIMULATED_ADVANCE_DATE
+  const advanced = simulatedToday === advanceDate
 
   return (
     <Panel padding="lg">
@@ -38,21 +41,22 @@ export function AdvanceSimDateControl({
             }}
             className="inline-flex items-center justify-center rounded-lg bg-of-primary px-4 py-2 text-sm font-semibold text-white hover:bg-of-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-of-primary"
           >
-            Advance to {formatDisplayDate(SIMULATED_ADVANCE_DATE)}
+            Advance to {formatDisplayDate(advanceDate)}
           </button>
         ) : null}
       </div>
       {advanced ? (
         <p className="mt-3 m-0 text-sm text-of-ink-secondary">
-          Simulated date advanced from {formatDisplayDate(SIMULATED_TODAY)}.
+          Simulated date advanced from {formatDisplayDate(baselineDate)}.
           {followUpOpen
             ? ' A proactive Teams-style follow-up is available under Follow-ups.'
             : ''}
         </p>
       ) : canAdvance ? (
         <p className="mt-3 m-0 text-sm text-of-ink-muted">
-          REQ1235 is in Execution with a stale developer update. Advancing to
-          October 21 triggers the two-day deadline follow-up.
+          REQ1235 is in Execution with a stale developer update. Advancing to{' '}
+          {formatDisplayDate(advanceDate)} triggers the two-day deadline
+          follow-up.
         </p>
       ) : (
         <p className="mt-3 m-0 text-sm text-of-ink-muted">

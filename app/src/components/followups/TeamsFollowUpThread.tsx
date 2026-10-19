@@ -18,6 +18,8 @@ interface TeamsFollowUpThreadProps {
   followUp: FollowUpRecord
   personaId: PersonaId
   simulatedToday: string
+  /** Display label for the REQ1235 target date. */
+  targetDateLabel: string
   /** Active presentation channel (defaults to the follow-up's stored channel). */
   channelId: CollaborationChannelId
   onRespond: (kind: FollowUpResponseKind, detail?: string) => boolean
@@ -38,6 +40,7 @@ const QUICK_RESPONSES: FollowUpResponseKind[] = [
 
 export function TeamsFollowUpThread({
   followUp,
+  targetDateLabel,
   personaId,
   simulatedToday,
   channelId,
@@ -83,7 +86,7 @@ export function TeamsFollowUpThread({
     <Panel padding="lg">
       <PanelHeader
         title={`${channel.label} status check`}
-        description={`Follow-up sent via ${channel.label} for JIRA-122345 before the October 23 target.`}
+        description={`Follow-up sent via ${channel.label} for JIRA-122345 before the ${targetDateLabel} target.`}
       />
 
       <div className="mb-3 flex flex-wrap items-center gap-2 text-sm">

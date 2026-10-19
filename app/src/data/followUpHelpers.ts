@@ -11,8 +11,12 @@ import {
   getCollaborationChannel,
   isCollaborationChannelId,
 } from './collaborationChannel'
+import { formatDisplayDate } from '../lib/format'
 import { daysUntilTarget } from './portfolioSelectors'
-import { SIMULATED_ADVANCE_DATE } from './simDate'
+import {
+  getActiveDemoCalendar,
+  type DemoCalendar,
+} from './simDate'
 import {
   BLOCKED_TECHNICAL_DETAIL,
   FOLLOW_UP_ACTIVITY_ID,
@@ -52,6 +56,7 @@ export function hydrateFollowUp(
 export function isFollowUpTriggerEligible(
   bundle: SubmittedSimulationBundle,
   simulatedToday: string,
+  calendar: DemoCalendar = getActiveDemoCalendar(),
 ): boolean {
   const { mainRequest, execution, followUp } = bundle
   if (followUp) return false
@@ -61,10 +66,12 @@ export function isFollowUpTriggerEligible(
   if (!assignment && mainRequest.parties.developerId !== 'ajay-raj') return false
   if (mainRequest.lifecycleStage !== 'Execution') return false
   if (mainRequest.parties.developerId !== 'ajay-raj') return false
-  if (simulatedToday !== SIMULATED_ADVANCE_DATE) return false
+  if (simulatedToday !== calendar.advanceDate) return false
   if (daysUntilTarget(mainRequest.targetDate, simulatedToday) !== 2) return false
-  // Stale developer update relative to the advanced date.
-  if (execution.lastDeveloperUpdateDate > '2026-10-19') return false
+  // Stale developer update relative to the scripted last-update cutoff (D+2).
+  if (execution.lastDeveloperUpdateDate > calendar.lastDeveloperUpdateDate) {
+    return false
+  }
   return true
 }
 
@@ -72,6 +79,7 @@ export function applyFollowUpTrigger(
   bundle: SubmittedSimulationBundle,
   simulatedToday: string,
   channelId: CollaborationChannelId = DEFAULT_COLLABORATION_CHANNEL,
+  calendar: DemoCalendar = getActiveDemoCalendar(),
 ): ApplyFollowUpTriggerResult {
   if (bundle.followUp) {
     return { ok: true, bundle, created: false }
@@ -83,13 +91,13 @@ export function applyFollowUpTrigger(
   ) {
     return { ok: true, bundle, created: false }
   }
-  if (!isFollowUpTriggerEligible(bundle, simulatedToday)) {
+  if (!isFollowUpTriggerEligible(bundle, simulatedToday, calendar)) {
     return { ok: false, reason: 'Follow-up trigger conditions not met.' }
   }
 
   const channel = getCollaborationChannel(channelId)
   const triggeredAt = `${simulatedToday}T09:00:00`
-  const message = buildFollowUpMessage(channelId)
+  const message = buildFollowUpMessage(channelId, calendar)
   const followUp: FollowUpRecord = {
     id: FOLLOW_UP_ID,
     status: 'open',
@@ -114,7 +122,7 @@ export function applyFollowUpTrigger(
           requestId: MAIN_REQUEST_ID,
           timestamp: triggeredAt,
           title: 'Proactive status follow-up opened',
-          detail: `OperateFlow opened a ${channel.label} status check with Ajay Raj for ${MAIN_JIRA_ID} (target 2026-10-23; two days remaining).`,
+          detail: `OperateFlow opened a ${channel.label} status check with Ajay Raj for ${MAIN_JIRA_ID} (target ${calendar.targetDate}; two days remaining).`,
           source: 'system',
           category: 'follow_up',
         },
@@ -137,6 +145,7 @@ export function applyFollowUpTrigger(
 export function applyFollowUpResponse(
   bundle: SubmittedSimulationBundle,
   input: FollowUpResponseInput,
+  calendar: DemoCalendar = getActiveDemoCalendar(),
 ): ApplyFollowUpResponseResult {
   const followUp = bundle.followUp
   if (!followUp) {
@@ -159,12 +168,14 @@ export function applyFollowUpResponse(
   let timelineDetail = ''
   let activityMessage = ''
 
+  const targetLabel = formatDisplayDate(calendar.targetDate)
+
   switch (input.kind) {
     case 'on_track':
-      responseDetail = 'Developer reported delivery remains on track for the October 23 target.'
+      responseDetail = `Developer reported delivery remains on track for the ${targetLabel} target.`
       workflowStatus = 'In Progress'
       deliveryHealth = 'On Track'
-      timelineDetail = `Ajay Raj reported ${MAIN_JIRA_ID} is on track for 2026-10-23.`
+      timelineDetail = `Ajay Raj reported ${MAIN_JIRA_ID} is on track for ${calendar.targetDate}.`
       activityMessage = `${MAIN_REQUEST_ID}: developer reported On Track.`
       break
     case 'completed':
@@ -220,7 +231,9 @@ export function applyFollowUpResponse(
         lastUpdated: input.referenceDate,
         attentionReasons:
           input.kind === 'blocked'
-            ? ['Developer reported a blocker affecting the October 23 target']
+            ? [
+                `Developer reported a blocker affecting the ${targetLabel} target`,
+              ]
             : undefined,
       },
       timelineEvents: [

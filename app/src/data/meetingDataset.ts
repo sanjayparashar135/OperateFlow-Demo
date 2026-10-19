@@ -1,5 +1,10 @@
 import type { PersonaId } from '../types/persona'
 import { MAIN_JIRA_ID, MAIN_REQUEST_ID } from '../types/simulation'
+import { formatDisplayDate } from '../lib/format'
+import {
+  getActiveDemoCalendar,
+  type DemoCalendar,
+} from './simDate'
 
 export const MEETING_ID = 'mtg-req1235-01'
 export const MEETING_TIMELINE_EVENT_ID = 'tl-req1235-13'
@@ -33,11 +38,20 @@ export const MEETING_DEFAULT_AGENDA: string[] = [
   'Confirm next status update.',
 ]
 
-export const MEETING_AI_RATIONALE =
-  'The blocked regional approval integration affects Ajay’s delivery work and likely needs Integration Lead support. A short working session with Radhe, Ajay, and Sreekanth focuses investigation ownership before the October 23 target, with Sanjay available if architecture guidance is needed.'
+export function buildMeetingAiRationale(
+  calendar: DemoCalendar = getActiveDemoCalendar(),
+): string {
+  const targetLabel = formatDisplayDate(calendar.targetDate)
+  return (
+    `The blocked regional approval integration affects Ajay’s delivery work and likely needs Integration Lead support. ` +
+    `A short working session with Radhe, Ajay, and Sreekanth focuses investigation ownership before the ${targetLabel} target, ` +
+    `with Sanjay available if architecture guidance is needed.`
+  )
+}
 
-export const MEETING_SCHEDULE_NOTE =
-  'Recommended demo slot for October 22 (not calendar-verified).'
+export function buildMeetingScheduleNote(meetingDate: string): string {
+  return `Recommended demo slot for ${formatDisplayDate(meetingDate)} (not calendar-verified).`
+}
 
 export const MEETING_RELATED_WORK_LABEL = `${MAIN_REQUEST_ID} / ${MAIN_JIRA_ID}`
 

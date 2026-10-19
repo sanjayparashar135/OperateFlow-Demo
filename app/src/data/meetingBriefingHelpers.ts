@@ -22,8 +22,15 @@ import { formatDisplayDate } from '../lib/format'
 
 export const MEETING_BRIEFING_CLIENT = 'Northstar Financial Services'
 
-export const MEETING_BRIEFING_INTEGRATION_OBJECTIVE =
-  'You are invited as Integration Lead to collaborate with Ajay Raj and Radhe Shyam on the regional approval integration blocker: clarify investigation ownership, validate timeout and callback-persistence hypotheses, and agree next technical actions while the October 23 target remains under assessment.'
+export function buildMeetingBriefingIntegrationObjective(
+  targetDate: string,
+): string {
+  return (
+    `You are invited as Integration Lead to collaborate with Ajay Raj and Radhe Shyam on the regional approval integration blocker: ` +
+    `clarify investigation ownership, validate timeout and callback-persistence hypotheses, and agree next technical actions while the ` +
+    `${formatDisplayDate(targetDate)} target remains under assessment.`
+  )
+}
 
 export interface MeetingRequestBriefing {
   requestId: string
@@ -161,7 +168,9 @@ export function buildMeetingRequestBriefing(
         TROUBLESHOOTING_ISSUE_SUMMARY
       : null,
     diagnosticDirections: [...DIAGNOSTIC_DIRECTIONS],
-    meetingObjective: MEETING_BRIEFING_INTEGRATION_OBJECTIVE,
+    meetingObjective: buildMeetingBriefingIntegrationObjective(
+      request.targetDate,
+    ),
     lifecycleStage: request.lifecycleStage,
     workflowStatus: request.workflowStatus,
     deliveryHealth: request.deliveryHealth,

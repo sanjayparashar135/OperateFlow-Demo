@@ -3,10 +3,12 @@ import type {
   DeliveryInsight,
   DeliveryRequest,
 } from '../types/delivery'
+import { formatDisplayDate } from '../lib/format'
+import { addDaysIso, getSimulatedBaseline } from './simDate'
 
 /**
- * Initial Northstar portfolio for Build 2.
- * Radhe (PM) KPI snapshot at SIMULATED_TODAY (2026-10-17):
+ * Initial Northstar portfolio offsets relative to demo baseline (D0).
+ * Radhe (PM) KPI snapshot at baseline:
  * - Visible: 12
  * - Active Requests: 10 (excludes REQ1211, REQ1212 Closed)
  * - Needs Attention: 7 (REQ1202–REQ1207, REQ1209)
@@ -20,7 +22,28 @@ import type {
  *
  * Does NOT include REQ1235 or JIRA-122345 (created during Intelligent Intake).
  */
-export const PORTFOLIO_REQUESTS: DeliveryRequest[] = [
+
+interface PortfolioRequestSeed {
+  id: string
+  title: string
+  application: string
+  primaryOwnerId: DeliveryRequest['primaryOwnerId']
+  parties: DeliveryRequest['parties']
+  lifecycleStage: DeliveryRequest['lifecycleStage']
+  workflowStatus: DeliveryRequest['workflowStatus']
+  deliveryHealth: DeliveryRequest['deliveryHealth']
+  priority: DeliveryRequest['priority']
+  /** Calendar-day offset from baseline for targetDate. */
+  targetOffset: number
+  /** Calendar-day offset from baseline for lastUpdated. */
+  lastUpdatedOffset: number
+  summary: string
+  attentionReasons?: string[]
+  /** When set, attentionReasons are built with formatDisplayDate(baseline+offset). */
+  releaseWindowAttentionOffset?: number
+}
+
+const PORTFOLIO_REQUEST_SEEDS: PortfolioRequestSeed[] = [
   {
     id: 'REQ1201',
     title: 'Digital identity verification soft-fail recovery',
@@ -31,8 +54,8 @@ export const PORTFOLIO_REQUESTS: DeliveryRequest[] = [
     workflowStatus: 'Draft',
     deliveryHealth: 'On Track',
     priority: 'Medium',
-    targetDate: '2026-11-05',
-    lastUpdated: '2026-10-16',
+    targetOffset: 19,
+    lastUpdatedOffset: -1,
     summary:
       'Clarify recovery messaging when soft-fail identity checks pause account activation during onboarding.',
   },
@@ -46,8 +69,8 @@ export const PORTFOLIO_REQUESTS: DeliveryRequest[] = [
     workflowStatus: 'Awaiting Review',
     deliveryHealth: 'On Track',
     priority: 'Low',
-    targetDate: '2026-11-12',
-    lastUpdated: '2026-10-15',
+    targetOffset: 26,
+    lastUpdatedOffset: -2,
     summary:
       'Add a confirmation email when customers update beneficiary details in self-service.',
     attentionReasons: ['Intake draft awaiting business review'],
@@ -65,8 +88,8 @@ export const PORTFOLIO_REQUESTS: DeliveryRequest[] = [
     workflowStatus: 'Pending Approval',
     deliveryHealth: 'On Track',
     priority: 'High',
-    targetDate: '2026-10-28',
-    lastUpdated: '2026-10-16',
+    targetOffset: 11,
+    lastUpdatedOffset: -1,
     summary:
       'Raise dual-control threshold for domestic wires and update compliance attestation text.',
     attentionReasons: ['Waiting on delivery-owner approval'],
@@ -81,8 +104,8 @@ export const PORTFOLIO_REQUESTS: DeliveryRequest[] = [
     workflowStatus: 'Awaiting Technical Review',
     deliveryHealth: 'On Track',
     priority: 'Medium',
-    targetDate: '2026-11-03',
-    lastUpdated: '2026-10-14',
+    targetOffset: 17,
+    lastUpdatedOffset: -3,
     summary:
       'Align mobile deposit receipt PDF with updated Northstar brand guidelines.',
     attentionReasons: ['Awaiting technical lead review'],
@@ -100,8 +123,8 @@ export const PORTFOLIO_REQUESTS: DeliveryRequest[] = [
     workflowStatus: 'Awaiting Technical Review',
     deliveryHealth: 'On Track',
     priority: 'High',
-    targetDate: '2026-10-20',
-    lastUpdated: '2026-10-13',
+    targetOffset: 3,
+    lastUpdatedOffset: -4,
     summary:
       'Add retry and dead-letter handling for claims status webhooks to partner systems.',
     attentionReasons: [
@@ -123,8 +146,8 @@ export const PORTFOLIO_REQUESTS: DeliveryRequest[] = [
     workflowStatus: 'Blocked',
     deliveryHealth: 'At Risk',
     priority: 'Critical',
-    targetDate: '2026-10-22',
-    lastUpdated: '2026-10-16',
+    targetOffset: 5,
+    lastUpdatedOffset: -1,
     summary:
       'Reduce intermittent latency spikes on statement retrieval used by online banking.',
     attentionReasons: [
@@ -142,8 +165,8 @@ export const PORTFOLIO_REQUESTS: DeliveryRequest[] = [
     workflowStatus: 'In Progress',
     deliveryHealth: 'Delayed',
     priority: 'Medium',
-    targetDate: '2026-10-18',
-    lastUpdated: '2026-10-15',
+    targetOffset: 1,
+    lastUpdatedOffset: -2,
     summary:
       'Sync weekend ATM and branch hours from facilities feed into Branch Finder.',
     attentionReasons: [
@@ -161,8 +184,8 @@ export const PORTFOLIO_REQUESTS: DeliveryRequest[] = [
     workflowStatus: 'In Progress',
     deliveryHealth: 'On Track',
     priority: 'High',
-    targetDate: '2026-10-30',
-    lastUpdated: '2026-10-16',
+    targetOffset: 13,
+    lastUpdatedOffset: -1,
     summary:
       'Allow customers to choose SMS versus push for fraud alert preferences.',
   },
@@ -176,14 +199,12 @@ export const PORTFOLIO_REQUESTS: DeliveryRequest[] = [
     workflowStatus: 'In UAT',
     deliveryHealth: 'At Risk',
     priority: 'High',
-    targetDate: '2026-10-19',
-    lastUpdated: '2026-10-16',
+    targetOffset: 2,
+    lastUpdatedOffset: -1,
     summary:
       'Increase document upload limit for loan packages and validate virus-scan timeouts.',
-    attentionReasons: [
-      'UAT findings may miss October 19 release window',
-      'Delivery health At Risk',
-    ],
+    releaseWindowAttentionOffset: 2,
+    attentionReasons: ['Delivery health At Risk'],
   },
   {
     id: 'REQ1210',
@@ -198,8 +219,8 @@ export const PORTFOLIO_REQUESTS: DeliveryRequest[] = [
     workflowStatus: 'Ready for Release',
     deliveryHealth: 'On Track',
     priority: 'Medium',
-    targetDate: '2026-10-24',
-    lastUpdated: '2026-10-15',
+    targetOffset: 7,
+    lastUpdatedOffset: -2,
     summary:
       'Enable date-range search across archived wealth statements after UAT sign-off.',
   },
@@ -216,8 +237,8 @@ export const PORTFOLIO_REQUESTS: DeliveryRequest[] = [
     workflowStatus: 'Closed',
     deliveryHealth: 'On Track',
     priority: 'Low',
-    targetDate: '2026-10-08',
-    lastUpdated: '2026-10-10',
+    targetOffset: -9,
+    lastUpdatedOffset: -7,
     summary:
       'Updated IVR activation prompts; hypercare complete and request closed.',
   },
@@ -234,18 +255,30 @@ export const PORTFOLIO_REQUESTS: DeliveryRequest[] = [
     workflowStatus: 'Closed',
     deliveryHealth: 'On Track',
     priority: 'Medium',
-    targetDate: '2026-10-05',
-    lastUpdated: '2026-10-09',
+    targetOffset: -12,
+    lastUpdatedOffset: -8,
     summary:
       'SSO for vendor invoice portal went live; monitoring window closed without incidents.',
   },
 ]
 
-export const RECENT_ACTIVITY: ActivityEntry[] = [
+interface ActivitySeed {
+  id: string
+  requestId: string
+  /** Calendar-day offset from baseline for the date portion. */
+  dayOffset: number
+  time: string
+  actor: string
+  category: ActivityEntry['category']
+  message: string
+}
+
+const ACTIVITY_SEEDS: ActivitySeed[] = [
   {
     id: 'act-01',
     requestId: 'REQ1206',
-    timestamp: '2026-10-16T16:40:00',
+    dayOffset: -1,
+    time: '16:40:00',
     actor: 'Ajay Raj',
     category: 'risk',
     message:
@@ -254,7 +287,8 @@ export const RECENT_ACTIVITY: ActivityEntry[] = [
   {
     id: 'act-02',
     requestId: 'REQ1203',
-    timestamp: '2026-10-16T14:10:00',
+    dayOffset: -1,
+    time: '14:10:00',
     actor: 'Radhe Shyam',
     category: 'review',
     message:
@@ -263,7 +297,8 @@ export const RECENT_ACTIVITY: ActivityEntry[] = [
   {
     id: 'act-03',
     requestId: 'REQ1208',
-    timestamp: '2026-10-16T11:25:00',
+    dayOffset: -1,
+    time: '11:25:00',
     actor: 'Ajay Raj',
     category: 'progress',
     message:
@@ -272,7 +307,8 @@ export const RECENT_ACTIVITY: ActivityEntry[] = [
   {
     id: 'act-04',
     requestId: 'REQ1209',
-    timestamp: '2026-10-16T09:50:00',
+    dayOffset: -1,
+    time: '09:50:00',
     actor: 'Sanjay Parashar',
     category: 'uat_release',
     message:
@@ -281,7 +317,8 @@ export const RECENT_ACTIVITY: ActivityEntry[] = [
   {
     id: 'act-05',
     requestId: 'REQ1205',
-    timestamp: '2026-10-15T17:05:00',
+    dayOffset: -2,
+    time: '17:05:00',
     actor: 'Sreekanth Mamdekar',
     category: 'assignment',
     message:
@@ -290,7 +327,8 @@ export const RECENT_ACTIVITY: ActivityEntry[] = [
   {
     id: 'act-06',
     requestId: 'REQ1207',
-    timestamp: '2026-10-15T13:20:00',
+    dayOffset: -2,
+    time: '13:20:00',
     actor: 'Radhe Shyam',
     category: 'progress',
     message:
@@ -299,7 +337,8 @@ export const RECENT_ACTIVITY: ActivityEntry[] = [
   {
     id: 'act-07',
     requestId: 'REQ1210',
-    timestamp: '2026-10-15T10:00:00',
+    dayOffset: -2,
+    time: '10:00:00',
     actor: 'Omer Ahmed',
     category: 'uat_release',
     message:
@@ -308,7 +347,8 @@ export const RECENT_ACTIVITY: ActivityEntry[] = [
   {
     id: 'act-08',
     requestId: 'REQ1202',
-    timestamp: '2026-10-14T15:35:00',
+    dayOffset: -3,
+    time: '15:35:00',
     actor: 'John Harrison',
     category: 'review',
     message:
@@ -316,33 +356,102 @@ export const RECENT_ACTIVITY: ActivityEntry[] = [
   },
 ]
 
+export function buildPortfolioRequests(
+  baselineDate: string = getSimulatedBaseline(),
+): DeliveryRequest[] {
+  return PORTFOLIO_REQUEST_SEEDS.map((seed) => {
+    const attentionReasons = [...(seed.attentionReasons ?? [])]
+    if (seed.releaseWindowAttentionOffset !== undefined) {
+      const releaseDate = addDaysIso(
+        baselineDate,
+        seed.releaseWindowAttentionOffset,
+      )
+      attentionReasons.unshift(
+        `UAT findings may miss ${formatDisplayDate(releaseDate)} release window`,
+      )
+    }
+    return {
+      id: seed.id,
+      title: seed.title,
+      application: seed.application,
+      primaryOwnerId: seed.primaryOwnerId,
+      parties: seed.parties,
+      lifecycleStage: seed.lifecycleStage,
+      workflowStatus: seed.workflowStatus,
+      deliveryHealth: seed.deliveryHealth,
+      priority: seed.priority,
+      targetDate: addDaysIso(baselineDate, seed.targetOffset),
+      lastUpdated: addDaysIso(baselineDate, seed.lastUpdatedOffset),
+      summary: seed.summary,
+      attentionReasons:
+        attentionReasons.length > 0 ? attentionReasons : undefined,
+    }
+  })
+}
+
+export function buildRecentActivity(
+  baselineDate: string = getSimulatedBaseline(),
+): ActivityEntry[] {
+  return ACTIVITY_SEEDS.map((seed) => ({
+    id: seed.id,
+    requestId: seed.requestId,
+    timestamp: `${addDaysIso(baselineDate, seed.dayOffset)}T${seed.time}`,
+    actor: seed.actor,
+    category: seed.category,
+    message: seed.message,
+  }))
+}
+
 /**
  * Scripted insights. Selectors re-scope title, detail, and evidence IDs
  * so persona views never cite hidden requests.
  */
-export const DELIVERY_INSIGHTS: DeliveryInsight[] = [
-  {
-    id: 'insight-deadline',
-    kind: 'deadline',
-    title: 'Deliveries approaching their target dates',
-    detail:
-      'These requests have target dates within the next three days. Confirm owners and delivery readiness before their deadlines.',
-    requestIds: ['REQ1205', 'REQ1207', 'REQ1209'],
-  },
-  {
-    id: 'insight-approval',
-    kind: 'approval',
-    title: 'Approval and review items are waiting',
-    detail:
-      'Clearing pending review and approval statuses unblocks planning throughput for Northstar delivery.',
-    requestIds: ['REQ1202', 'REQ1203', 'REQ1204', 'REQ1205'],
-  },
-  {
-    id: 'insight-risk',
-    kind: 'risk',
-    title: 'Delivery risks need prompt attention',
-    detail:
-      'At Risk items may miss near-term targets unless dependency owners escalate and recover the timeline.',
-    requestIds: ['REQ1206', 'REQ1209'],
-  },
-]
+export function buildDeliveryInsights(
+  _baselineDate: string = getSimulatedBaseline(),
+): DeliveryInsight[] {
+  return [
+    {
+      id: 'insight-deadline',
+      kind: 'deadline',
+      title: 'Deliveries approaching their target dates',
+      detail:
+        'These requests have target dates within the next three days. Confirm owners and delivery readiness before their deadlines.',
+      requestIds: ['REQ1205', 'REQ1207', 'REQ1209'],
+    },
+    {
+      id: 'insight-approval',
+      kind: 'approval',
+      title: 'Approval and review items are waiting',
+      detail:
+        'Clearing pending review and approval statuses unblocks planning throughput for Northstar delivery.',
+      requestIds: ['REQ1202', 'REQ1203', 'REQ1204', 'REQ1205'],
+    },
+    {
+      id: 'insight-risk',
+      kind: 'risk',
+      title: 'Delivery risks need prompt attention',
+      detail:
+        'At Risk items may miss near-term targets unless dependency owners escalate and recover the timeline.',
+      requestIds: ['REQ1206', 'REQ1209'],
+    },
+  ]
+}
+
+/** Seed portfolio for the active demo calendar baseline. */
+export function getPortfolioRequests(
+  baselineDate: string = getSimulatedBaseline(),
+): DeliveryRequest[] {
+  return buildPortfolioRequests(baselineDate)
+}
+
+export function getRecentActivity(
+  baselineDate: string = getSimulatedBaseline(),
+): ActivityEntry[] {
+  return buildRecentActivity(baselineDate)
+}
+
+export function getDeliveryInsights(
+  baselineDate: string = getSimulatedBaseline(),
+): DeliveryInsight[] {
+  return buildDeliveryInsights(baselineDate)
+}
